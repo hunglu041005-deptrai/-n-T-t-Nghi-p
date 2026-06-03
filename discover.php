@@ -40,7 +40,7 @@ require_once __DIR__ . '/includes/header.php';
                 <select name="service" class="form-select">
                     <option value="">Tất cả dịch vụ</option>
                     <option value="booking" <?php echo $filters['service'] === 'booking' ? 'selected' : ''; ?>>Đặt sân</option>
-                    <option value="tournament" <?php echo $filters['service'] === 'tournament' ? 'selected' : ''; ?>>Giải đấu</option>
+                    <option value="membership" <?php echo $filters['service'] === 'membership' ? 'selected' : ''; ?>>Gói hội viên</option>
                     <option value="training" <?php echo $filters['service'] === 'training' ? 'selected' : ''; ?>>Đào tạo</option>
                     <option value="equipment" <?php echo $filters['service'] === 'equipment' ? 'selected' : ''; ?>>Thiết bị</option>
                 </select>
@@ -139,46 +139,46 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                         </div>
                         
-                        <!-- Tournament Service -->
+                        <!-- Membership Plans -->
                         <div class="col-md-6">
-                            <div class="service-card h-100 p-4 bg-white rounded-4 shadow-sm border">
+                            <div class="service-card p-4 bg-white rounded-4 shadow-sm border">
                                 <div class="service-header d-flex align-items-center mb-3">
                                     <div class="service-icon bg-success text-white rounded-circle me-3">
-                                        <i class="fas fa-trophy fa-2x"></i>
+                                        <i class="fas fa-id-card fa-2x"></i>
                                     </div>
                                     <div>
-                                        <h5 class="fw-bold mb-1">Tổ chức giải đấu</h5>
-                                        <small class="text-muted">Chuyên nghiệp & Uy tín</small>
+                                        <h5 class="fw-bold mb-1">Gói hội viên</h5>
+                                        <small class="text-muted">Ưu đãi & Tiết kiệm</small>
                                     </div>
                                 </div>
-                                
-                                <p class="text-muted mb-3">Dịch vụ tổ chức giải đấu cầu lông chuyên nghiệp từ quy mô nhỏ đến lớn với đầy đủ trang thiết bị.</p>
-                                
+
+                                <p class="text-muted mb-3">Chơi thả ga với gói hội viên ưu đãi — mua combo vé, tặng vé miễn phí, thời hạn linh hoạt.</p>
+
                                 <div class="features-list mb-4">
                                     <div class="feature-item d-flex align-items-center mb-2">
                                         <i class="fas fa-check-circle text-success me-2"></i>
-                                        <span>Tư vấn format giải đấu</span>
+                                        <span>Combo vé ưu đãi, tặng vé miễn phí</span>
                                     </div>
                                     <div class="feature-item d-flex align-items-center mb-2">
                                         <i class="fas fa-check-circle text-success me-2"></i>
-                                        <span>Trọng tài chuyên nghiệp</span>
+                                        <span>Thời hạn linh hoạt 3 – 12 tháng</span>
                                     </div>
                                     <div class="feature-item d-flex align-items-center mb-2">
                                         <i class="fas fa-check-circle text-success me-2"></i>
-                                        <span>Livestream & quay phim</span>
+                                        <span>Nhiều khung giờ: sáng, chiều, tối</span>
                                     </div>
                                     <div class="feature-item d-flex align-items-center">
                                         <i class="fas fa-check-circle text-success me-2"></i>
-                                        <span>Giải thưởng & cup</span>
+                                        <span>Tiết kiệm đến 10% so với giá lẻ</span>
                                     </div>
                                 </div>
-                                
+
                                 <div class="d-flex gap-2">
-                                    <a href="tournament.php" class="btn btn-success flex-fill">
-                                        <i class="fas fa-phone me-2"></i>Liên hệ
+                                    <a href="membership.php" class="btn btn-success flex-fill" style="background: linear-gradient(135deg,#28a745,#20c997); border:none; border-radius:12px; font-weight:600;">
+                                        <i class="fas fa-play me-2"></i>Xem gói hội viên
                                     </a>
-                                    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#tournamentModal">
-                                        <i class="fas fa-info-circle"></i>
+                                    <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#membershipModal" style="border-radius:12px;">
+                                        <i class="fas fa-question-circle"></i>
                                     </button>
                                 </div>
                             </div>

@@ -2,8 +2,20 @@
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/booking-system.php';
 
+// Bắt buộc đăng nhập
+if (!isLoggedIn()) {
+    header('Location: login.php?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+    exit;
+}
+
 $courts = getCourts();
-$bookingSystem = new AdvancedBookingSystem();
+
+// Lấy court_id từ URL nếu có
+$preselected_court_id = $_GET['court_id'] ?? null;
+$preselected_court = null;
+if ($preselected_court_id) {
+    $preselected_court = getCourtById($preselected_court_id);
+}
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -223,14 +235,21 @@ require_once __DIR__ . '/includes/header.php';
                     
                     <!-- Payment Methods -->
                     <div class="payment-methods mb-4">
-                        <h6 class="fw-bold mb-3">Phương thức thanh toán</h6>
+                        <h6 class="fw-bold mb-3">
+                            <i class="fas fa-credit-card text-primary me-2"></i>
+                            Phương thức thanh toán
+                        </h6>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="payment-option" data-method="momo">
-                                    <div class="payment-card p-3 border rounded">
+                                    <div class="payment-card p-4 border rounded-3">
                                         <div class="d-flex align-items-center">
                                             <input type="radio" name="paymentMethod" value="momo" class="form-check-input me-3">
-                                            <img src="https://via.placeholder.com/40x40?text=MoMo" class="me-3" alt="MoMo">
+                                            <div class="payment-icon me-3">
+                                                <div class="bg-danger bg-opacity-10 rounded-circle p-2 d-inline-flex">
+                                                    <i class="fab fa-cc-mastercard text-danger fa-lg"></i>
+                                                </div>
+                                            </div>
                                             <div>
                                                 <div class="fw-bold">Ví MoMo</div>
                                                 <small class="text-muted">Thanh toán qua ví điện tử</small>
@@ -241,10 +260,14 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                             <div class="col-md-6">
                                 <div class="payment-option" data-method="vnpay">
-                                    <div class="payment-card p-3 border rounded">
+                                    <div class="payment-card p-4 border rounded-3">
                                         <div class="d-flex align-items-center">
                                             <input type="radio" name="paymentMethod" value="vnpay" class="form-check-input me-3">
-                                            <img src="https://via.placeholder.com/40x40?text=VNPay" class="me-3" alt="VNPay">
+                                            <div class="payment-icon me-3">
+                                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 d-inline-flex">
+                                                    <i class="fas fa-university text-primary fa-lg"></i>
+                                                </div>
+                                            </div>
                                             <div>
                                                 <div class="fw-bold">VNPay</div>
                                                 <small class="text-muted">Thanh toán qua ngân hàng</small>
@@ -253,18 +276,45 @@ require_once __DIR__ . '/includes/header.php';
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-12">
                                 <div class="payment-option" data-method="cash">
-                                    <div class="payment-card p-3 border rounded">
+                                    <div class="payment-card p-4 border rounded-3">
                                         <div class="d-flex align-items-center">
                                             <input type="radio" name="paymentMethod" value="cash" class="form-check-input me-3" checked>
-                                            <i class="fas fa-money-bill-wave fa-2x text-success me-3"></i>
-                                            <div>
+                                            <div class="payment-icon me-3">
+                                                <div class="bg-success bg-opacity-10 rounded-circle p-2 d-inline-flex">
+                                                    <i class="fas fa-money-bill-wave text-success fa-lg"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1">
                                                 <div class="fw-bold">Tiền mặt</div>
-                                                <small class="text-muted">Thanh toán tại sân</small>
+                                                <small class="text-muted">Thanh toán tại sân khi đến chơi</small>
+                                            </div>
+                                            <div class="text-end">
+                                                <span class="badge bg-success bg-opacity-20 text-success">
+                                                    <i class="fas fa-star me-1"></i>Phổ biến
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Payment Info -->
+                        <div class="payment-info mt-3 p-3 bg-light rounded-3">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <small class="text-muted">
+                                        <i class="fas fa-shield-alt text-success me-1"></i>
+                                        <strong>Bảo mật:</strong> Tất cả giao dịch được mã hóa và bảo mật
+                                    </small>
+                                </div>
+                                <div class="col-md-4 text-md-end">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Xử lý tức thì
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -379,3 +429,28 @@ require_once __DIR__ . '/includes/header.php';
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
 <script src="assets/js/booking-online.js"></script>
+<?php if ($preselected_court): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tự động chọn sân nếu có court_id trong URL
+    const courtId = '<?php echo $preselected_court['id']; ?>';
+    const selectBtn = document.querySelector(`[data-court-id="${courtId}"]`);
+    if (selectBtn) {
+        // Scroll đến sân được chọn
+        selectBtn.closest('.court-booking-card').scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+        });
+        
+        // Highlight sân được chọn
+        selectBtn.closest('.court-booking-card').style.border = '2px solid #007bff';
+        selectBtn.closest('.court-booking-card').style.backgroundColor = '#f8f9ff';
+        
+        // Tự động click sau 1 giây
+        setTimeout(() => {
+            selectBtn.click();
+        }, 1000);
+    }
+});
+</script>
+<?php endif; ?>

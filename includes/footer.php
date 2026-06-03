@@ -15,9 +15,10 @@
                 <h6 class="mb-3">Cho Người Dùng</h6>
                 <ul class="list-unstyled small text-muted">
                     <li class="mb-2"><a href="index.php" class="text-decoration-none text-light">Tìm sân</a></li>
-                    <li class="mb-2"><a href="#" class="text-decoration-none text-light">Hướng dẫn đặt sân</a></li>
-                    <li class="mb-2"><a href="#" class="text-decoration-none text-light">Thanh toán</a></li>
-                    <li class="mb-2"><a href="#" class="text-decoration-none text-light">Câu hỏi thường gặp</a></li>
+                    <li class="mb-2"><a href="booking-online.php" class="text-decoration-none text-light">Đặt sân</a></li>
+                    <li class="mb-2"><a href="membership.php" class="text-decoration-none text-light">Gói hội viên</a></li>
+                    <li class="mb-2"><a href="booking-history.php" class="text-decoration-none text-light">Lịch sử đặt sân</a></li>
+                    <li class="mb-2"><a href="equipment.php" class="text-decoration-none text-light">Mua thiết bị</a></li>
                 </ul>
             </div>
             <div class="col-md-3 col-sm-6">

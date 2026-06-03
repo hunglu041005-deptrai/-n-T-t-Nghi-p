@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/functions.php';
 
 // Chặn admin truy cập trang web thường
-blockAdminFromPublic();
+// blockAdminFromPublic();
 
 $filters = [
     'q' => $_GET['q'] ?? '',
@@ -74,8 +74,12 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
                     </div>
                     
                     <div class="court-actions d-flex gap-2">
-                        <a href="booking-online.php?court_id=' . $court['id'] . '" 
-                           class="btn btn-primary btn-sm w-100">
+                        <a href="court.php?id=' . $court['id'] . '" 
+                           class="btn btn-outline-primary btn-sm flex-fill">
+                            <i class="fas fa-eye me-1"></i>Chi tiết
+                        </a>
+                        <a href="booking-online.php" 
+                           class="btn btn-primary btn-sm flex-fill">
                             <i class="fas fa-calendar-plus me-1"></i>Đặt sân
                         </a>
                     </div>
@@ -326,8 +330,12 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                             
                             <div class="court-actions d-flex gap-2">
-                                <a href="booking-online.php?court_id=<?php echo $court['id']; ?>" 
-                                   class="btn btn-primary btn-sm w-100">
+                                <a href="court.php?id=<?php echo $court['id']; ?>" 
+                                   class="btn btn-outline-primary btn-sm flex-fill">
+                                    <i class="fas fa-eye me-1"></i>Chi tiết
+                                </a>
+                                <a href="booking-online.php" 
+                                   class="btn btn-primary btn-sm flex-fill">
                                     <i class="fas fa-calendar-plus me-1"></i>Đặt sân
                                 </a>
                             </div>

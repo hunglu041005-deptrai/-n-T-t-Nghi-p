@@ -92,11 +92,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $category_id = intval($_POST['category_id'] ?? 0);
                     $name = trim($_POST['product_name'] ?? '');
                     $slug = strtolower(str_replace(' ', '-', $name));
+                    
+                    // Tạo slug unique
+                    $base_slug = $slug;
+                    $counter = 1;
+                    $check_stmt = $mysqli->prepare('SELECT id FROM products WHERE slug = ?');
+                    $check_stmt->bind_param('s', $slug);
+                    $check_stmt->execute();
+                    while ($check_stmt->get_result()->num_rows > 0) {
+                        $slug = $base_slug . '-' . $counter;
+                        $counter++;
+                        $check_stmt->bind_param('s', $slug);
+                        $check_stmt->execute();
+                    }
+                    $check_stmt->close();
+                    
                     $description = trim($_POST['product_description'] ?? '');
                     $brand = trim($_POST['brand'] ?? '');
                     $price = intval($_POST['price'] ?? 0);
                     $sale_price = !empty($_POST['sale_price']) ? intval($_POST['sale_price']) : NULL;
                     $sku = trim($_POST['sku'] ?? '');
+                    // Tạo SKU tự động nếu để trống
+                    if (empty($sku)) {
+                        $sku = 'SKU-' . time() . '-' . rand(1000, 9999);
+                    }
+                    
+                    // Kiểm tra SKU unique
+                    $base_sku = $sku;
+                    $counter = 1;
+                    $check_sku_stmt = $mysqli->prepare('SELECT id FROM products WHERE sku = ?');
+                    $check_sku_stmt->bind_param('s', $sku);
+                    $check_sku_stmt->execute();
+                    while ($check_sku_stmt->get_result()->num_rows > 0) {
+                        $sku = $base_sku . '-' . $counter;
+                        $counter++;
+                        $check_sku_stmt->bind_param('s', $sku);
+                        $check_sku_stmt->execute();
+                    }
+                    $check_sku_stmt->close();
+                    
                     $stock = intval($_POST['stock_quantity'] ?? 0);
                     $image = trim($_POST['image'] ?? '');
                     $featured = isset($_POST['featured']) ? 1 : 0;
@@ -123,6 +157,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $price = intval($_POST['price'] ?? 0);
                     $sale_price = !empty($_POST['sale_price']) ? intval($_POST['sale_price']) : NULL;
                     $sku = trim($_POST['sku'] ?? '');
+                    // Tạo SKU tự động nếu để trống
+                    if (empty($sku)) {
+                        $sku = 'SKU-' . time() . '-' . rand(1000, 9999);
+                    }
+                    
+                    // Kiểm tra SKU unique (trừ sản phẩm hiện tại)
+                    $base_sku = $sku;
+                    $counter = 1;
+                    $check_sku_stmt = $mysqli->prepare('SELECT id FROM products WHERE sku = ? AND id != ?');
+                    $check_sku_stmt->bind_param('si', $sku, $id);
+                    $check_sku_stmt->execute();
+                    while ($check_sku_stmt->get_result()->num_rows > 0) {
+                        $sku = $base_sku . '-' . $counter;
+                        $counter++;
+                        $check_sku_stmt->bind_param('si', $sku, $id);
+                        $check_sku_stmt->execute();
+                    }
+                    $check_sku_stmt->close();
+                    
                     $stock = intval($_POST['stock_quantity'] ?? 0);
                     $image = trim($_POST['image'] ?? '');
                     $featured = isset($_POST['featured']) ? 1 : 0;

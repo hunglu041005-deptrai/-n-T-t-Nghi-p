@@ -1,63 +1,73 @@
 <?php
-header('Content-Type: application/json; charset=utf-8');
-require_once __DIR__ . '/../db.php';
-$response = ['success' => false, 'data' => null, 'message' => ''];
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
 
-$method = $_SERVER['REQUEST_METHOD'];
-if ($method === 'POST') {
-    $payload = json_decode(file_get_contents('php://input'), true);
-    $user_id = intval($payload['user_id'] ?? 0);
-    $court_id = intval($payload['court_id'] ?? 0);
-    $date = $payload['booking_date'] ?? '';
-    $start_time = $payload['start_time'] ?? '';
-    $duration = intval($payload['duration'] ?? 1);
-    $payment_method = $payload['payment_method'] ?? 'cash';
+require_once __DIR__ . '/../includes/functions.php';
 
-    if (!$user_id || !$court_id || !$date || !$start_time || !$duration) {
-        $response['message'] = 'Missing required booking fields.';
-    } else {
-        $startDateTime = DateTime::createFromFormat('Y-m-d H:i', $date . ' ' . $start_time);
-        if (!$startDateTime) {
-            $response['message'] = 'Invalid booking date/time.';
-        } else {
-            $endDateTime = clone $startDateTime;
-            $endDateTime->modify("+$duration hour");
-            $end_time = $endDateTime->format('H:i:00');
-            $start_time_full = $startDateTime->format('H:i:00');
-            $stmt = $mysqli->prepare('SELECT COUNT(*) AS cnt FROM bookings WHERE court_id = ? AND booking_date = ? AND status != "cancelled" AND NOT (end_time <= ? OR start_time >= ?)');
-            $stmt->bind_param('isss', $court_id, $date, $start_time_full, $end_time);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            $row = $result->fetch_assoc();
-            if ($row['cnt'] > 0) {
-                $response['message'] = 'Khung giờ đã bị trùng.';
-            } else {
-                $stmt = $mysqli->prepare('SELECT price_per_hour FROM courts WHERE id = ? LIMIT 1');
-                $stmt->bind_param('i', $court_id);
-                $stmt->execute();
-                $result = $stmt->get_result();
-                $court = $result->fetch_assoc();
-                if (!$court) {
-                    $response['message'] = 'Sân không tồn tại.';
-                } else {
-                    $total_price = intval($court['price_per_hour']) * $duration;
-                    $status = 'pending';
-                    $payment_status = 'pending';
-                    $stmt = $mysqli->prepare('INSERT INTO bookings (user_id, court_id, booking_date, start_time, end_time, total_price, payment_method, payment_status, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-                    $stmt->bind_param('iisssisss', $user_id, $court_id, $date, $start_time_full, $end_time, $total_price, $payment_method, $payment_status, $status);
-                    if ($stmt->execute()) {
-                        $response['success'] = true;
-                        $response['data'] = ['booking_id' => $stmt->insert_id, 'total_price' => $total_price];
-                        $response['message'] = 'Đặt sân thành công.';
-                    } else {
-                        $response['message'] = 'Không thể tạo booking.';
-                    }
-                }
-            }
-        }
-    }
-} else {
-    $response['message'] = 'Phương thức không hợp lệ.';
+// Handle preflight requests
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    exit(0);
 }
 
-echo json_encode($response);
+try {
+    $user_id = $_GET['user_id'] ?? $_SESSION['user_id'] ?? null;
+    
+    if (!$user_id) {
+        throw new Exception('User ID is required');
+    }
+    
+    // Get user bookings
+    $bookings = getUserBookings($user_id);
+    
+    // Format bookings for API response
+    $formattedBookings = array_map(function($booking) {
+        return [
+            'id' => $booking['id'],
+            'court_id' => $booking['court_id'],
+            'court_name' => $booking['court_name'],
+            'location' => $booking['location'],
+            'booking_date' => $booking['booking_date'],
+            'start_time' => substr($booking['start_time'], 0, 5), // Remove seconds
+            'end_time' => substr($booking['end_time'], 0, 5),
+            'total_price' => $booking['total_price'],
+            'payment_method' => $booking['payment_method'],
+            'payment_status' => $booking['payment_status'],
+            'status' => $booking['status'],
+            'notes' => $booking['notes'] ?? '',
+            'created_at' => $booking['created_at']
+        ];
+    }, $bookings);
+    
+    // Calculate statistics
+    $stats = [
+        'total' => count($bookings),
+        'confirmed' => count(array_filter($bookings, function($b) { return $b['status'] === 'confirmed'; })),
+        'pending' => count(array_filter($bookings, function($b) { return $b['status'] === 'pending'; })),
+        'cancelled' => count(array_filter($bookings, function($b) { return $b['status'] === 'cancelled'; })),
+        'paid' => count(array_filter($bookings, function($b) { return $b['payment_status'] === 'paid'; })),
+        'unpaid' => count(array_filter($bookings, function($b) { return $b['payment_status'] === 'unpaid'; })),
+    ];
+    
+    $response = [
+        'success' => true,
+        'bookings' => $formattedBookings,
+        'statistics' => $stats,
+        'user_id' => $user_id,
+        'timestamp' => date('Y-m-d H:i:s')
+    ];
+    
+    echo json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    
+} catch (Exception $e) {
+    http_response_code(400);
+    echo json_encode([
+        'success' => false,
+        'error' => $e->getMessage(),
+        'timestamp' => date('Y-m-d H:i:s')
+    ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+}
+?>
+</content>
+</invoke>

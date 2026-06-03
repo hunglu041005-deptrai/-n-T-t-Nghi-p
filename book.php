@@ -3,127 +3,128 @@ require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/payment.php';
 require_once __DIR__ . '/includes/email.php';
 
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+          strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
 // Kiểm tra đăng nhập
 if (!isLoggedIn()) {
+    if ($isAjax) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Bạn cần đăng nhập để đặt sân.', 'redirect' => 'login.php']);
+        exit;
+    }
     header('Location: login.php');
     exit;
 }
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     redirect('index.php');
 }
 
-$court_id = intval($_POST['court_id'] ?? 0);
-$date = $_POST['booking_date'] ?? '';
-$start_time = $_POST['start_time'] ?? '';
-$duration = intval($_POST['duration'] ?? 1);
+$court_id      = intval($_POST['court_id'] ?? 0);
+$date          = $_POST['booking_date'] ?? '';
+$start_time    = $_POST['start_time'] ?? '';
+$duration      = intval($_POST['duration'] ?? 1);
 $payment_method = strtolower($_POST['payment_method'] ?? 'cash');
+$notes         = trim($_POST['notes'] ?? '');
 
 $error = '';
+
 $court = getCourtById($court_id);
-if (!$court) {
-    $error = 'Sân không tồn tại.';
-}
+if (!$court) $error = 'Sân không tồn tại.';
 
 if (!$date || !$start_time || !$duration || !$payment_method) {
     $error = 'Vui lòng cung cấp đầy đủ thông tin đặt sân.';
 }
 
-$startDateTime = DateTime::createFromFormat('Y-m-d H:i', $date . ' ' . $start_time);
-if (!$startDateTime) {
-    $error = 'Ngày giờ không hợp lệ.';
+if (!$error) {
+    $startDateTime = DateTime::createFromFormat('Y-m-d H:i', $date . ' ' . $start_time);
+    if (!$startDateTime) {
+        // Thử format H:i:s
+        $startDateTime = DateTime::createFromFormat('Y-m-d H:i:s', $date . ' ' . $start_time);
+    }
+    if (!$startDateTime) {
+        $error = 'Ngày giờ không hợp lệ: ' . $date . ' ' . $start_time;
+    } else {
+        $endDateTime = clone $startDateTime;
+        $endDateTime->modify("+{$duration} hour");
+        $end_time_full   = $endDateTime->format('H:i:00');
+        $start_time_full = $startDateTime->format('H:i:00');
+    }
 }
-$endDateTime = clone $startDateTime;
-$endDateTime->modify("+$duration hour");
-$end_time = $endDateTime->format('H:i:00');
-$start_time_full = $startDateTime->format('H:i:00');
 
-if ($startDateTime->format('Y-m-d') !== $date) {
-    $error = 'Ngày đặt sân phải hợp lệ.';
-}
-
-if (!$error && !isSlotAvailable($court_id, $date, $start_time_full, $end_time)) {
+if (!$error && !isSlotAvailable($court_id, $date, $start_time_full, $end_time_full)) {
     $error = 'Khung giờ này đã được đặt. Vui lòng chọn khung giờ khác.';
 }
 
 if ($error) {
+    if ($isAjax) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => $error]);
+        exit;
+    }
     $_SESSION['booking_error'] = $error;
     redirect("court.php?id={$court_id}&date={$date}");
 }
 
-$total_price = $court['price_per_hour'] * $duration;
-$stmt = $mysqli->prepare('INSERT INTO bookings (user_id, court_id, booking_date, start_time, end_time, total_price, payment_method, payment_status, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
-$status = 'pending';
+// Lưu booking vào database
+$total_price    = $court['price_per_hour'] * $duration;
+$status         = 'confirmed';
 $payment_status = ($payment_method === 'cash') ? 'unpaid' : 'pending';
-$stmt->bind_param('iisssisss', $_SESSION['user_id'], $court_id, $date, $start_time_full, $end_time, $total_price, $payment_method, $payment_status, $status);
-$stmt->execute();
+$user_id        = (int) $_SESSION['user_id'];
+
+$stmt = $mysqli->prepare(
+    'INSERT INTO bookings (user_id, court_id, booking_date, start_time, end_time, total_price, payment_method, payment_status, status, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+);
+$stmt->bind_param('iisssissss',
+    $user_id, $court_id, $date,
+    $start_time_full, $end_time_full,
+    $total_price, $payment_method, $payment_status, $status, $notes
+);
+
+if (!$stmt->execute()) {
+    $error = 'Lỗi khi lưu booking: ' . $stmt->error;
+    $stmt->close();
+    if ($isAjax) {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $error]);
+        exit;
+    }
+    $_SESSION['booking_error'] = $error;
+    redirect("court.php?id={$court_id}&date={$date}");
+}
+
 $booking_id = $stmt->insert_id;
 $stmt->close();
 
-// Get user info for email
-$user_email = $_SESSION['user_email'] ?? '';
-$user_name = $_SESSION['user_name'] ?? 'Khách hàng';
-
-// Prepare booking data for email
-$booking_data = [
-    'id' => $booking_id,
-    'court_name' => $court['name'],
-    'location' => $court['location'],
-    'booking_date' => $date,
-    'start_time' => $start_time_full,
-    'end_time' => $end_time,
-    'total_price' => $total_price,
-    'status' => $status,
-    'user_name' => $user_name,
-    'user_email' => $user_email,
-    'payment_method' => $payment_method
-];
-
-// Send confirmation email to user
-EmailNotification::sendBookingConfirmation($user_email, $user_name, $booking_data);
-
-// Notify admin
-EmailNotification::notifyAdminBooking($booking_data);
-
-// Handle payment based on method
-if ($payment_method === 'vnpay') {
-    // Generate VNPay payment link
-    $vnpay_url = PaymentGateway::generateVNPayLink(
-        $booking_id,
-        $total_price,
-        'Đặt sân cầu lông - ' . $court['name'],
-        $_SESSION['user_id']
-    );
-    
-    // Store payment URL in session for reference
-    $_SESSION['payment_redirect'] = $vnpay_url;
-    
-    // Redirect to VNPay
+// Xử lý theo phương thức thanh toán
+if ($payment_method === 'vnpay' && class_exists('PaymentGateway')) {
+    $vnpay_url = PaymentGateway::generateVNPayLink($booking_id, $total_price, 'Đặt sân - ' . $court['name'], $user_id);
     redirect($vnpay_url);
-    
-} elseif ($payment_method === 'momo') {
-    // Generate MoMo payment request
-    $momo_data = PaymentGateway::generateMoMoLink(
-        $booking_id,
-        $total_price,
-        'Đặt sân cầu lông - ' . $court['name'],
-        $_SESSION['user_id']
-    );
-    
-    // In production, you'll POST this to MoMo's API
-    // For now, store and redirect to payment page
-    $_SESSION['momo_data'] = $momo_data;
+
+} elseif ($payment_method === 'momo' && class_exists('PaymentGateway')) {
+    $_SESSION['momo_data'] = PaymentGateway::generateMoMoLink($booking_id, $total_price, 'Đặt sân - ' . $court['name'], $user_id);
     redirect('payment-momo.php?booking_id=' . $booking_id);
-    
-} elseif ($payment_method === 'cash') {
-    // Mark as cash payment (unpaid, waiting for customer to pay at court)
-    PaymentGateway::processCashPayment($booking_id);
-    
-    // Send success message
-    $_SESSION['booking_success'] = 'Đặt sân thành công! Vui lòng thanh toán khi đến sân.';
-    redirect('booking-history.php');
-    
+
 } else {
-    // Invalid payment method
-    $_SESSION['booking_error'] = 'Phương thức thanh toán không hợp lệ.';
-    redirect("court.php?id={$court_id}&date={$date}");
+    // Tiền mặt hoặc fallback
+    $_SESSION['booking_success'] = 'Đặt sân thành công! Vui lòng thanh toán khi đến sân.';
+
+    if ($isAjax) {
+        echo json_encode([
+            'success'      => true,
+            'booking_id'   => $booking_id,
+            'message'      => 'Đặt sân thành công!',
+            'court_name'   => $court['name'],
+            'booking_date' => $date,
+            'start_time'   => $start_time_full,
+            'end_time'     => $end_time_full,
+            'total_price'  => $total_price,
+            'redirect'     => 'booking-history.php'
+        ]);
+        exit;
+    }
+
+    redirect('booking-history.php');
 }
