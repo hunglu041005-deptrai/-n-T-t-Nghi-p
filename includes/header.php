@@ -79,7 +79,12 @@ if (!$isAdminPage && isAdmin()) {
                         </li>
                     <?php else: ?>
                         <li class="nav-item">
-                            <a class="nav-link text-danger" href="logout.php">
+                            <?php
+                            // Xác định đường dẫn logout đúng theo vị trí thư mục
+                            $isCoachPage = $isCoachPage ?? false;
+                            $logoutPath  = $isCoachPage ? '../logout.php' : 'logout.php';
+                            ?>
+                            <a class="nav-link text-danger" href="<?php echo $logoutPath; ?>">
                                 <i class="fas fa-sign-out-alt me-1"></i> Đăng xuất
                             </a>
                         </li>

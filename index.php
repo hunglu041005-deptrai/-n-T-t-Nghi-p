@@ -45,6 +45,11 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
                         <span><i class="fas fa-map-marker-alt"></i>' . escape($court['location']) . '</span>
                         <span><i class="fas fa-clock"></i>6:00–22:00</span>
                     </div>
+                    <div class="court-rating">
+                        <div class="stars">' . renderStars((float)($court['avg_rating'] ?? 4.8)) . '</div>
+                        <span class="rating-score">(' . number_format((float)($court['avg_rating'] ?? 4.8), 1) . ')</span>
+                        <span class="rating-count">150+ đặt</span>
+                    </div>
                     <div class="court-tags">
                         <span>Mái che</span><span>Sân gỗ</span><span>Điều hòa</span>
                     </div>
@@ -241,6 +246,29 @@ require_once __DIR__ . '/includes/header.php';
     font-size: .72rem; font-weight: 600;
     padding: 3px 8px; border-radius: 6px;
 }
+
+/* ── Rating stars ── */
+.court-rating {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: .7rem;
+}
+.stars {
+    display: inline-flex; gap: 1px;
+}
+.stars i { font-size: .85rem; }
+.star-filled  { color: #f59e0b; }
+.star-half    { color: #f59e0b; }
+.star-empty   { color: #d1d5db; }
+.rating-score { font-weight: 800; font-size: .88rem; color: #374151; }
+.rating-count { font-size: .75rem; color: #9ca3af; }
+.btn-rate {
+    margin-left: auto;
+    background: none; border: 1px solid #e5e7eb;
+    border-radius: 8px; padding: 2px 8px;
+    font-size: .72rem; color: #6b7280; cursor: pointer;
+    transition: all .2s;
+}
+.btn-rate:hover { border-color: #f59e0b; color: #f59e0b; background: #fffbeb; }
 .court-footer {
     display: flex; gap: .5rem; align-items: center;
     padding-top: .8rem;
@@ -535,7 +563,7 @@ require_once __DIR__ . '/includes/header.php';
                 $phone = $court['phone'] ?? '0968073500';
             ?>
             <div class="col-md-6 col-lg-4">
-                <div class="court-card-v2">
+                <div class="court-card-v2" data-court-id="<?php echo $court['id']; ?>">
                     <div class="court-img-wrap">
                         <img src="<?php echo escape($court['cover_image']); ?>" alt="<?php echo escape($court['name']); ?>">
                         <span class="court-badge-status">Còn trống</span>
@@ -546,6 +574,22 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="court-meta">
                             <span><i class="fas fa-map-marker-alt"></i><?php echo escape($court['location']); ?></span>
                             <span><i class="fas fa-clock"></i>6:00 – 22:00</span>
+                        </div>
+                        <?php
+                        $avg = (float)($court['avg_rating'] ?? 0);
+                        $cnt = (int)($court['review_count'] ?? 0);
+                        $display = $avg > 0 ? $avg : 4.8;
+                        $displayCnt = $cnt > 0 ? $cnt : 150;
+                        ?>
+                        <div class="court-rating">
+                            <div class="stars"><?php echo renderStars($display); ?></div>
+                            <span class="rating-score">(<?php echo number_format($display,1); ?>)</span>
+                            <span class="rating-count"><?php echo $displayCnt >= 100 ? '150+ đặt' : $displayCnt . ' đánh giá'; ?></span>
+                            <?php if(isLoggedIn()): ?>
+                            <button class="btn-rate" onclick="openRateModal(<?php echo $court['id']; ?>, '<?php echo escape($court['name']); ?>')">
+                                <i class="fas fa-star me-1"></i>Đánh giá
+                            </button>
+                            <?php endif; ?>
                         </div>
                         <div class="court-tags">
                             <span>Mái che</span><span>Sân gỗ</span><span>Điều hòa</span>
@@ -706,6 +750,157 @@ function confirmCallIndex(courtName, phone, phoneDisplay) {
     document.getElementById('callPhoneLinkIndex').href           = 'tel:' + phone;
     new bootstrap.Modal(document.getElementById('callModalIndex')).show();
     return false;
+}
+</script>
+
+<!-- ===== MODAL ĐÁNH GIÁ SÂN ===== -->
+<div class="modal fade" id="rateModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:20px;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#667eea,#764ba2);padding:1.3rem 1.5rem;text-align:center;color:#fff;">
+                <i class="fas fa-star fa-lg mb-2 d-block" style="color:#fbbf24;"></i>
+                <h5 class="fw-bold mb-0">Đánh giá sân</h5>
+                <div id="rateCourtName" style="opacity:.8;font-size:.88rem;margin-top:.2rem;"></div>
+            </div>
+            <div style="padding:1.5rem;">
+                <!-- Star picker -->
+                <div style="text-align:center;margin-bottom:1.2rem;">
+                    <div id="starPicker" style="display:inline-flex;gap:6px;cursor:pointer;">
+                        <?php for($i=1;$i<=5;$i++): ?>
+                        <i class="far fa-star rate-star" data-val="<?php echo $i; ?>"
+                           style="font-size:2.2rem;color:#d1d5db;transition:all .15s;"></i>
+                        <?php endfor; ?>
+                    </div>
+                    <div id="rateLabel" style="font-size:.82rem;color:#9ca3af;margin-top:.4rem;">Chọn số sao</div>
+                </div>
+
+                <!-- Review text -->
+                <div style="margin-bottom:1rem;">
+                    <textarea id="rateText" rows="3" class="form-control"
+                              style="border-radius:12px;font-size:.88rem;resize:none;"
+                              placeholder="Nhận xét của bạn (tuỳ chọn)..."></textarea>
+                </div>
+
+                <button id="btnSubmitRate" class="btn w-100 py-2 fw-bold"
+                        style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:12px;font-size:.95rem;">
+                    <i class="fas fa-paper-plane me-2"></i>Gửi đánh giá
+                </button>
+
+                <div id="rateError" style="display:none;margin-top:.7rem;background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:.6rem;font-size:.82rem;color:#dc2626;text-align:center;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Modal đánh giá ──
+let _rateCourtId = 0;
+let _rateVal     = 0;
+
+const rateLabels = ['','Rất tệ','Tệ','Bình thường','Tốt','Xuất sắc'];
+
+function openRateModal(courtId, courtName) {
+    _rateCourtId = courtId;
+    _rateVal     = 0;
+    document.getElementById('rateCourtName').textContent = courtName;
+    document.getElementById('rateText').value            = '';
+    document.getElementById('rateError').style.display   = 'none';
+    document.getElementById('rateLabel').textContent     = 'Chọn số sao';
+    renderStarPicker(0);
+    new bootstrap.Modal(document.getElementById('rateModal')).show();
+}
+
+function renderStarPicker(val) {
+    document.querySelectorAll('.rate-star').forEach(s => {
+        const v = parseInt(s.dataset.val);
+        s.className = v <= val ? 'fas fa-star rate-star' : 'far fa-star rate-star';
+        s.style.color = v <= val ? '#f59e0b' : '#d1d5db';
+        s.style.fontSize = '2.2rem';
+    });
+}
+
+document.getElementById('starPicker').addEventListener('mouseover', e => {
+    if (!e.target.classList.contains('rate-star')) return;
+    renderStarPicker(parseInt(e.target.dataset.val));
+    document.getElementById('rateLabel').textContent = rateLabels[parseInt(e.target.dataset.val)];
+});
+document.getElementById('starPicker').addEventListener('mouseleave', () => {
+    renderStarPicker(_rateVal);
+    document.getElementById('rateLabel').textContent = _rateVal ? rateLabels[_rateVal] : 'Chọn số sao';
+});
+document.getElementById('starPicker').addEventListener('click', e => {
+    if (!e.target.classList.contains('rate-star')) return;
+    _rateVal = parseInt(e.target.dataset.val);
+    renderStarPicker(_rateVal);
+    document.getElementById('rateLabel').textContent = rateLabels[_rateVal];
+});
+
+document.getElementById('btnSubmitRate').addEventListener('click', function() {
+    if (!_rateVal) {
+        document.getElementById('rateError').style.display = 'block';
+        document.getElementById('rateError').textContent = 'Vui lòng chọn số sao trước khi gửi.';
+        return;
+    }
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Đang gửi...';
+
+    const fd = new FormData();
+    fd.append('court_id',    _rateCourtId);
+    fd.append('rating',      _rateVal);
+    fd.append('review_text', document.getElementById('rateText').value);
+
+    fetch('api/reviews.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('rateModal')).hide();
+                // Cập nhật hiển thị sao inline
+                updateCourtRating(_rateCourtId, data.avg_rating, data.review_count);
+                showToast('Cảm ơn bạn đã đánh giá! ⭐'.repeat(1), 'success');
+            } else {
+                document.getElementById('rateError').style.display = 'block';
+                document.getElementById('rateError').textContent = data.error;
+            }
+        })
+        .catch(() => {
+            document.getElementById('rateError').style.display = 'block';
+            document.getElementById('rateError').textContent = 'Lỗi kết nối. Thử lại sau.';
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Gửi đánh giá';
+        });
+});
+
+function updateCourtRating(courtId, avg, cnt) {
+    // Tìm tất cả card của sân đó và cập nhật sao
+    document.querySelectorAll('[data-court-id="' + courtId + '"]').forEach(card => {
+        const starsEl = card.querySelector('.stars');
+        const scoreEl = card.querySelector('.rating-score');
+        if (starsEl) starsEl.innerHTML = buildStarsHTML(avg);
+        if (scoreEl) scoreEl.textContent = '(' + avg.toFixed(1) + ')';
+    });
+}
+
+function buildStarsHTML(rating) {
+    let h = '', full = Math.floor(rating), half = (rating - full) >= 0.3 ? 1 : 0, empty = 5 - full - half;
+    for (let i=0;i<full;i++)  h += '<i class="fas fa-star star-filled"></i>';
+    if (half)                  h += '<i class="fas fa-star-half-alt star-half"></i>';
+    for (let i=0;i<empty;i++) h += '<i class="far fa-star star-empty"></i>';
+    return h;
+}
+
+function showToast(msg, type='success') {
+    const t = document.createElement('div');
+    t.style.cssText = `position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;
+        background:${type==='success'?'#10b981':'#ef4444'};color:#fff;
+        padding:.75rem 1.2rem;border-radius:12px;font-weight:700;
+        box-shadow:0 8px 25px rgba(0,0,0,.2);font-size:.88rem;
+        animation:slideUp .3s ease;`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
 }
 </script>
 

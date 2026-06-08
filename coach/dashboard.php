@@ -80,7 +80,51 @@ $all_stmt->execute();
 $all_students = $all_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $all_stmt->close();
 
-$isAdminPage = true;
+$isAdminPage  = true;
+$isCoachPage  = true;   // để header dùng đúng path ../logout.php
+
+// Xử lý upload avatar
+$avatarMsg = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['coach_avatar']) && $_SESSION['role'] === 'coach') {
+    $file = $_FILES['coach_avatar'];
+    $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    $maxSize = 2 * 1024 * 1024; // 2MB
+
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $avatarMsg = 'error:Lỗi tải ảnh lên.';
+    } elseif (!in_array($file['type'], $allowed)) {
+        $avatarMsg = 'error:Chỉ hỗ trợ JPG, PNG, GIF, WEBP.';
+    } elseif ($file['size'] > $maxSize) {
+        $avatarMsg = 'error:Ảnh tối đa 2MB.';
+    } else {
+        $uploadDir = __DIR__ . '/../uploads/avatars/';
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        $ext      = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $filename = 'coach_' . $coach_id . '_' . time() . '.' . $ext;
+        $dest     = $uploadDir . $filename;
+
+        if (move_uploaded_file($file['tmp_name'], $dest)) {
+            // Lưu vào DB
+            $avatarPath = 'uploads/avatars/' . $filename;
+            $upd = $mysqli->prepare('UPDATE coaches SET avatar = ? WHERE id = ?');
+            $upd->bind_param('si', $avatarPath, $coach_id);
+            $upd->execute();
+            $upd->close();
+
+            // Xóa ảnh cũ nếu có
+            if (!empty($coach['avatar']) && file_exists(__DIR__ . '/../' . $coach['avatar'])) {
+                @unlink(__DIR__ . '/../' . $coach['avatar']);
+            }
+            $coach['avatar'] = $avatarPath;
+            $avatarMsg = 'success:Cập nhật ảnh đại diện thành công!';
+        } else {
+            $avatarMsg = 'error:Không thể lưu ảnh. Kiểm tra quyền thư mục.';
+        }
+    }
+}
+
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
@@ -190,13 +234,50 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="container-lg">
             <div class="row align-items-center">
                 <div class="col-md-6">
+                    <?php
+                    // Thông báo avatar nếu có
+                    if ($avatarMsg) {
+                        [$type, $msg] = explode(':', $avatarMsg, 2);
+                        $alertClass = $type === 'success' ? 'alert-success' : 'alert-danger';
+                        echo "<div class='alert $alertClass py-1 px-3 mb-2' style='font-size:.85rem;'>$msg</div>";
+                    }
+                    ?>
                     <div class="d-flex align-items-center gap-3 mb-2">
-                        <div style="width:52px;height:52px;background:rgba(255,255,255,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;">
-                            <i class="fas fa-chalkboard-teacher fa-lg"></i>
+                        <!-- Avatar có thể click để đổi -->
+                        <div class="coach-avatar-wrap" title="Đổi ảnh đại diện" onclick="document.getElementById('avatarInput').click()"
+                             style="position:relative;width:56px;height:56px;cursor:pointer;flex-shrink:0;">
+                            <?php if (!empty($coach['avatar']) && file_exists(__DIR__ . '/../' . $coach['avatar'])): ?>
+                                <img src="../<?php echo escape($coach['avatar']); ?>?v=<?php echo time(); ?>"
+                                     alt="Avatar"
+                                     style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.4);">
+                            <?php else: ?>
+                                <div style="width:56px;height:56px;background:rgba(255,255,255,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,.3);">
+                                    <i class="fas fa-chalkboard-teacher fa-lg"></i>
+                                </div>
+                            <?php endif; ?>
+                            <!-- Overlay camera icon -->
+                            <div style="position:absolute;bottom:0;right:0;width:20px;height:20px;background:#ff6b35;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                                <i class="fas fa-camera" style="font-size:.5rem;color:#fff;"></i>
+                            </div>
                         </div>
+
+                        <!-- Form upload ẩn -->
+                        <?php if ($_SESSION['role'] === 'coach'): ?>
+                        <form id="avatarForm" method="POST" enctype="multipart/form-data" style="display:none;">
+                            <input type="file" id="avatarInput" name="coach_avatar"
+                                   accept="image/jpeg,image/png,image/gif,image/webp"
+                                   onchange="document.getElementById('avatarForm').submit();">
+                        </form>
+                        <?php endif; ?>
+
                         <div>
                             <h3 class="fw-bold mb-0"><?php echo escape($coach['name'] ?? 'HLV Dashboard'); ?></h3>
                             <small style="opacity:.7;"><?php echo escape($coach['specialty'] ?? 'Huấn luyện viên cầu lông'); ?></small>
+                            <?php if ($_SESSION['role'] === 'coach'): ?>
+                            <div style="opacity:.6;font-size:.7rem;margin-top:2px;">
+                                <i class="fas fa-camera me-1"></i>Click ảnh để đổi avatar
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

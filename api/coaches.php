@@ -8,6 +8,7 @@ $week_start = date('Y-m-d', strtotime('monday this week'));
 
 $result = $mysqli->query("
     SELECT c.id, c.name, c.specialty, c.experience_years, c.max_students_per_week,
+           c.avatar,
            COALESCE(cnt.total, 0) AS current_students
     FROM coaches c
     LEFT JOIN (
@@ -28,10 +29,12 @@ while ($row = $result->fetch_assoc()) {
         'name'            => $row['name'],
         'specialty'       => $row['specialty'],
         'experience'      => $row['experience_years'] . ' năm kinh nghiệm',
+        'experience_years'=> (int)$row['experience_years'],
         'max'             => (int)$row['max_students_per_week'],
         'current'         => (int)$row['current_students'],
         'remaining'       => max(0, $remaining),
         'full'            => $remaining <= 0,
+        'avatar'          => $row['avatar'] ? $row['avatar'] : null,
     ];
 }
 

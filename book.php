@@ -68,10 +68,24 @@ if ($error) {
 }
 
 // Lưu booking vào database
-$total_price    = $court['price_per_hour'] * $duration;
+$user_id        = (int) $_SESSION['user_id'];
+
+// ===== MEMBERSHIP BENEFIT: giá 80K cố định + trừ vé =====
+$membership       = checkMemberBenefit($user_id);
+$use_member_price = false;
+$member_discount  = 0;
+
+if ($membership) {
+    $priceCalc        = calcMemberBookingPrice($court['price_per_hour'], $duration, $membership);
+    $total_price      = $priceCalc['price'];
+    $use_member_price = $priceCalc['used_ticket'];
+    $member_discount  = $priceCalc['discount'];
+} else {
+    $total_price = $court['price_per_hour'] * $duration;
+}
+
 $status         = 'confirmed';
 $payment_status = ($payment_method === 'cash') ? 'unpaid' : 'pending';
-$user_id        = (int) $_SESSION['user_id'];
 
 $stmt = $mysqli->prepare(
     'INSERT INTO bookings (user_id, court_id, booking_date, start_time, end_time, total_price, payment_method, payment_status, status, notes)
@@ -97,6 +111,16 @@ if (!$stmt->execute()) {
 
 $booking_id = $stmt->insert_id;
 $stmt->close();
+
+// ===== TRỪ VÉ HỘI VIÊN nếu áp giá thành viên =====
+if ($use_member_price && $membership) {
+    useMemberTicket(
+        (int)$membership['id'],
+        $user_id,
+        $booking_id,
+        'Đặt sân: ' . $court['name'] . ' ' . $date . ' ' . $start_time_full
+    );
+}
 
 // Gửi thông báo đặt sân thành công
 try {

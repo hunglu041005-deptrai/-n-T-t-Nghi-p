@@ -441,9 +441,20 @@ require_once __DIR__ . '/includes/header.php';
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-white">HLV kèm 1-1</label>
-                                    <select name="preferred_coach" id="coachSelect" class="form-select form-select-dark">
-                                        <option value="">Hệ thống tự gán HLV phù hợp</option>
-                                    </select>
+                                    <!-- Hidden input để lưu coach_id được chọn -->
+                                    <input type="hidden" name="preferred_coach_id" id="selectedCoachId">
+                                    <input type="hidden" name="preferred_coach"    id="selectedCoachName">
+
+                                    <!-- Button trigger picker -->
+                                    <div id="coachPickerBtn"
+                                         onclick="openCoachPicker()"
+                                         style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+                                                border-radius:12px;padding:.75rem 1rem;cursor:pointer;
+                                                color:rgba(255,255,255,.35);transition:all .2s;display:flex;
+                                                align-items:center;gap:.75rem;min-height:52px;">
+                                        <i class="fas fa-user-tie" style="font-size:1.1rem;opacity:.5;"></i>
+                                        <span id="coachPickerLabel">Hệ thống tự gán HLV phù hợp</span>
+                                    </div>
                                     <div id="coachStatus" class="mt-2"></div>
                                 </div>
                                 <div class="col-md-6">
@@ -475,103 +486,6 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 </div>
 
-<!-- ===== STUDENT CARD MODAL ===== -->
-<div class="modal fade" id="studentCardModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius:24px;overflow:hidden;">
-            <div style="background:linear-gradient(135deg,#0f0c29,#302b63);padding:1.5rem 2rem;color:#fff;text-align:center;">
-                <i class="fas fa-check-circle fa-2x mb-2 d-block" style="color:#fbbf24;"></i>
-                <h5 class="fw-bold mb-1">Đăng ký thành công!</h5>
-                <small style="opacity:.7;">Thẻ học viên của bạn đã được tạo</small>
-            </div>
-
-            <div id="student-card-print" style="padding:1.5rem;">
-                <div id="student-card" style="background:linear-gradient(135deg,#0f0c29 0%,#302b63 100%);border-radius:18px;padding:1.8rem;color:#fff;position:relative;overflow:hidden;margin-bottom:1rem;">
-                    <div style="position:absolute;top:-30px;right:-30px;width:150px;height:150px;background:rgba(251,191,36,.1);border-radius:50%;"></div>
-                    <div style="position:absolute;bottom:-40px;left:-20px;width:120px;height:120px;background:rgba(99,102,241,.1);border-radius:50%;"></div>
-
-                    <div class="d-flex justify-content-between align-items-start mb-3" style="position:relative;z-index:1;">
-                        <div>
-                            <div style="font-size:.68rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1px;">BadmintonPro Academy</div>
-                            <div style="font-size:1.1rem;font-weight:800;color:#fbbf24;">THẺ HỌC VIÊN</div>
-                        </div>
-                        <div style="background:rgba(251,191,36,.2);border:1px solid rgba(251,191,36,.4);border-radius:8px;padding:4px 10px;font-size:.72rem;font-weight:700;color:#fbbf24;">ACTIVE</div>
-                    </div>
-
-                    <div style="text-align:center;margin:1rem 0;position:relative;z-index:1;">
-                        <div style="font-size:.68rem;color:rgba(255,255,255,.5);margin-bottom:.3rem;">MÃ HỌC VIÊN</div>
-                        <div id="sc-code" style="font-size:1.8rem;font-weight:900;letter-spacing:4px;color:#fff;font-family:monospace;"></div>
-                    </div>
-
-                    <div style="text-align:center;margin:1rem 0;position:relative;z-index:1;">
-                        <div id="sc-qr" style="display:inline-block;background:#fff;padding:10px;border-radius:12px;"></div>
-                        <div style="font-size:.68rem;color:rgba(255,255,255,.5);margin-top:.5rem;">Quét mã để xác nhận học viên</div>
-                    </div>
-
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;position:relative;z-index:1;">
-                        <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:.7rem;">
-                            <div style="font-size:.62rem;color:rgba(255,255,255,.5);text-transform:uppercase;">Họ tên</div>
-                            <div id="sc-name" style="font-weight:700;font-size:.85rem;"></div>
-                        </div>
-                        <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:.7rem;">
-                            <div style="font-size:.62rem;color:rgba(255,255,255,.5);text-transform:uppercase;">Khóa học</div>
-                            <div id="sc-course" style="font-weight:700;font-size:.85rem;color:#fbbf24;"></div>
-                        </div>
-                        <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:.7rem;">
-                            <div style="font-size:.62rem;color:rgba(255,255,255,.5);text-transform:uppercase;">Ngày đăng ký</div>
-                            <div id="sc-date" style="font-weight:700;font-size:.85rem;"></div>
-                        </div>
-                        <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:.7rem;">
-                            <div style="font-size:.62rem;color:rgba(255,255,255,.5);text-transform:uppercase;">HLV kèm 1-1</div>
-                            <div id="sc-coach" style="font-weight:700;font-size:.85rem;color:#a5b4fc;"></div>
-                        </div>
-                    </div>
-
-                    <!-- Lịch học 3 ngày/tuần -->
-                    <div style="margin-top:.8rem;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:.7rem;position:relative;z-index:1;">
-                        <div style="font-size:.62rem;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:.3rem;">
-                            <i class="fas fa-calendar-alt me-1"></i>Lịch học (3 ngày/tuần)
-                        </div>
-                        <div id="sc-schedule" style="font-weight:700;font-size:.85rem;color:#c7d2fe;"></div>
-                        <div id="sc-time" style="font-size:.75rem;color:rgba(255,255,255,.6);margin-top:.2rem;"></div>
-                    </div>
-
-                    <!-- Slot còn lại -->
-                    <div style="margin-top:.6rem;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);border-radius:10px;padding:.5rem .7rem;text-align:center;position:relative;z-index:1;">
-                        <span id="sc-slots" style="font-weight:700;font-size:.8rem;color:#4ade80;"></span>
-                    </div>
-
-                    <div style="margin-top:.6rem;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:.5rem .7rem;text-align:center;position:relative;z-index:1;">
-                        <span id="sc-phone" style="font-weight:700;color:#fbbf24;font-size:.85rem;"></span>
-                    </div>
-                </div>
-
-                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:1rem;font-size:.82rem;color:#92400e;text-align:center;">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Xuất trình mã thẻ hoặc QR code cho nhân viên khi đến sân tập
-                </div>
-            </div>
-
-            <div style="padding:1rem 1.5rem;border-top:1px solid #f3f4f6;display:flex;gap:.8rem;">
-                <button onclick="printStudentCard()" class="btn flex-grow-1 py-2 fw-bold" style="background:linear-gradient(135deg,#0f0c29,#302b63);color:#fff;border:none;border-radius:12px;">
-                    <i class="fas fa-print me-2"></i>In thẻ học viên
-                </button>
-                <button class="btn py-2 fw-bold" style="background:#f3f4f6;color:#374151;border:none;border-radius:12px;padding:0 1.5rem;" data-bs-dismiss="modal">
-                    Đóng
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-@media print {
-    body * { visibility: hidden; }
-    #student-card-print, #student-card-print * { visibility: visible; }
-    #student-card-print { position: fixed; top: 0; left: 0; width: 100%; padding: 1rem; }
-}
-</style>
-
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
 const courseLabels = {
@@ -586,7 +500,9 @@ function openRegModal(course) {
     document.querySelector('.reg-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// Load danh sách HLV + slot khi trang load
+// ======= COACH PICKER =======
+let allCoaches = [];
+
 document.addEventListener('DOMContentLoaded', function() {
     loadCoaches();
 });
@@ -596,83 +512,186 @@ function loadCoaches() {
         .then(r => r.json())
         .then(data => {
             if (!data.success) return;
-            const select = document.getElementById('coachSelect');
-            if (!select) return;
-
-            // Lưu data để dùng khi chọn
-            select._coaches = data.coaches;
-
-            // Clear và thêm options
-            select.innerHTML = '<option value="">Hệ thống tự gán HLV phù hợp</option>';
-            data.coaches.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.name;
-                opt.textContent = c.full
-                    ? `${c.name} — ĐÃ ĐẦY (${c.current}/${c.max})`
-                    : `${c.name} — Còn ${c.remaining} chỗ`;
-                if (c.full) opt.disabled = true;
-                select.appendChild(opt);
-            });
-
-            // Gắn event change
-            select.addEventListener('change', function() {
-                updateCoachStatus(this.value, select._coaches);
-            });
+            allCoaches = data.coaches;
         })
-        .catch(() => {
-            // Fallback nếu API lỗi
-            const select = document.getElementById('coachSelect');
-            if (select) {
-                select.innerHTML = `
-                    <option value="">Hệ thống tự gán HLV phù hợp</option>
-                    <option>HLV Nguyễn Văn A</option>
-                    <option>HLV Trần Thị B</option>
-                    <option>HLV Lê Văn C</option>
-                `;
-            }
-        });
+        .catch(() => {});
 }
 
-function updateCoachStatus(coachName, coaches) {
-    const statusEl = document.getElementById('coachStatus');
-    if (!statusEl) return;
+function openCoachPicker() {
+    // Tạo modal picker nếu chưa có
+    let modal = document.getElementById('coachPickerModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'coachPickerModal';
+        modal.style.cssText = `
+            position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+            background:rgba(0,0,0,.7);backdrop-filter:blur(6px);padding:1rem;
+        `;
+        modal.innerHTML = `
+            <div style="background:linear-gradient(135deg,#0f0c29,#1e1b4b);border-radius:24px;
+                        width:100%;max-width:700px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;
+                        box-shadow:0 24px 80px rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.1);">
+                <div style="padding:1.5rem 1.8rem;border-bottom:1px solid rgba(255,255,255,.1);
+                             display:flex;align-items:center;justify-content:space-between;">
+                    <div>
+                        <h5 style="color:#fff;font-weight:800;margin:0 0 .2rem;">Chọn Huấn Luyện Viên</h5>
+                        <small style="color:rgba(255,255,255,.5);">Click vào HLV bạn muốn đăng ký kèm 1-1</small>
+                    </div>
+                    <button onclick="closeCoachPicker()" style="background:rgba(255,255,255,.1);border:none;
+                            color:#fff;width:36px;height:36px;border-radius:50%;font-size:1.1rem;cursor:pointer;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
 
-    if (!coachName) {
-        statusEl.innerHTML = `
-            <small style="color:rgba(255,255,255,.5);">
-                <i class="fas fa-info-circle me-1"></i>
-                Hệ thống sẽ tự gán HLV còn chỗ phù hợp nhất
-            </small>`;
+                <!-- Option: auto assign -->
+                <div id="coachAutoOption"
+                     onclick="selectCoach(null)"
+                     style="margin:1rem 1.5rem .5rem;background:rgba(251,191,36,.1);border:2px solid rgba(251,191,36,.3);
+                            border-radius:14px;padding:1rem 1.2rem;cursor:pointer;transition:all .2s;
+                            display:flex;align-items:center;gap:1rem;">
+                    <div style="width:48px;height:48px;background:rgba(251,191,36,.2);border-radius:50%;
+                                display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="fas fa-magic" style="color:#fbbf24;font-size:1.2rem;"></i>
+                    </div>
+                    <div>
+                        <div style="color:#fbbf24;font-weight:700;font-size:.95rem;">Hệ thống tự gán HLV phù hợp</div>
+                        <small style="color:rgba(255,255,255,.5);">Hệ thống chọn HLV còn chỗ và phù hợp nhất với bạn</small>
+                    </div>
+                    <div style="margin-left:auto;"><i class="fas fa-chevron-right" style="color:rgba(255,255,255,.3);"></i></div>
+                </div>
+
+                <div style="overflow-y:auto;padding:0 1.5rem 1.5rem;" id="coachPickerList">
+                    <div style="color:rgba(255,255,255,.4);text-align:center;padding:2rem;">
+                        <div class="spinner-border spinner-border-sm me-2"></div>Đang tải danh sách HLV...
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', e => { if (e.target === modal) closeCoachPicker(); });
+    }
+
+    // Render danh sách HLV
+    renderCoachList();
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function renderCoachList() {
+    const list = document.getElementById('coachPickerList');
+    if (!list) return;
+
+    if (!allCoaches.length) {
+        // Thử load lại
+        fetch('api/coaches.php').then(r=>r.json()).then(d => {
+            if (d.success) { allCoaches = d.coaches; renderCoachList(); }
+        });
         return;
     }
 
-    const coach = coaches?.find(c => c.name === coachName);
-    if (!coach) return;
+    let html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;margin-top:.5rem;">';
+    allCoaches.forEach(c => {
+        const pct = Math.round((c.current / c.max) * 100);
+        const barColor = c.full ? '#ef4444' : c.remaining <= 1 ? '#f59e0b' : '#4ade80';
+        const statusText = c.full ? '❌ Đã đầy' : `✅ Còn ${c.remaining} chỗ`;
+        const statusColor = c.full ? '#ef4444' : '#4ade80';
 
-    const pct = (coach.current / coach.max) * 100;
-    const color = coach.full ? '#ef4444' : coach.remaining <= 1 ? '#f59e0b' : '#4ade80';
+        // Avatar: dùng ảnh thật nếu có, fallback icon
+        const avatarHtml = c.avatar
+            ? `<img src="${c.avatar}" alt="${c.name}" style="width:64px;height:64px;object-fit:cover;border-radius:50%;border:3px solid rgba(251,191,36,.4);">`
+            : `<div style="width:64px;height:64px;background:linear-gradient(135deg,#302b63,#6366f1);border-radius:50%;
+                           display:flex;align-items:center;justify-content:center;flex-shrink:0;border:3px solid rgba(251,191,36,.3);">
+                   <i class="fas fa-chalkboard-teacher" style="color:#fff;font-size:1.4rem;"></i>
+               </div>`;
 
-    statusEl.innerHTML = `
-        <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:.6rem .8rem;border:1px solid rgba(255,255,255,.1);">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
-                <small style="color:rgba(255,255,255,.7);font-weight:600;">
-                    <i class="fas fa-user-graduate me-1"></i>${coach.name}
-                </small>
-                <small style="color:${color};font-weight:700;">
-                    ${coach.full ? '❌ Đã đầy' : `✅ Còn ${coach.remaining} chỗ`}
-                </small>
+        html += `
+            <div class="coach-pick-card ${c.full ? 'is-full' : ''}"
+                 onclick="${c.full ? '' : `selectCoach(${JSON.stringify(c).replace(/"/g,'&quot;')})`}"
+                 data-coach-id="${c.id}"
+                 style="background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.1);
+                        border-radius:16px;padding:1.2rem;cursor:${c.full ? 'not-allowed' : 'pointer'};
+                        transition:all .2s;opacity:${c.full ? '.55' : '1'};">
+                <div style="display:flex;align-items:center;gap:.8rem;margin-bottom:1rem;">
+                    <div style="flex-shrink:0;">${avatarHtml}</div>
+                    <div style="min-width:0;">
+                        <div style="color:#fff;font-weight:800;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</div>
+                        <div style="color:rgba(255,255,255,.5);font-size:.78rem;margin-top:.1rem;">${c.specialty || 'Huấn luyện viên'}</div>
+                        <div style="color:rgba(251,191,36,.8);font-size:.72rem;margin-top:.2rem;">
+                            <i class="fas fa-award me-1"></i>${c.experience_years || 0} năm kinh nghiệm
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thanh slot -->
+                <div style="height:5px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden;margin-bottom:.5rem;">
+                    <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width .4s;"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <small style="color:rgba(255,255,255,.4);font-size:.72rem;">${c.current}/${c.max} học viên tuần này</small>
+                    <small style="color:${statusColor};font-weight:700;font-size:.75rem;">${statusText}</small>
+                </div>
+                ${c.full ? '' : '<div style="text-align:center;margin-top:.7rem;"><span style="background:rgba(251,191,36,.2);color:#fbbf24;border-radius:8px;padding:3px 12px;font-size:.75rem;font-weight:700;">Chọn HLV này</span></div>'}
             </div>
-            <div style="height:4px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden;">
-                <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;transition:width .4s;"></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;margin-top:.3rem;">
-                <small style="color:rgba(255,255,255,.4);font-size:.7rem;">${coach.specialty}</small>
-                <small style="color:rgba(255,255,255,.4);font-size:.7rem;">${coach.current}/${coach.max} học viên</small>
-            </div>
-        </div>
-    `;
+        `;
+    });
+    html += '</div>';
+
+    list.innerHTML = html;
+
+    // Hover effect
+    list.querySelectorAll('.coach-pick-card:not(.is-full)').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            card.style.borderColor = 'rgba(251,191,36,.6)';
+            card.style.background = 'rgba(255,255,255,.1)';
+            card.style.transform = 'translateY(-2px)';
+        });
+        card.addEventListener('mouseleave', () => {
+            const isSelected = card.dataset.coachId == document.getElementById('selectedCoachId').value;
+            card.style.borderColor = isSelected ? 'rgba(251,191,36,.8)' : 'rgba(255,255,255,.1)';
+            card.style.background = isSelected ? 'rgba(251,191,36,.08)' : 'rgba(255,255,255,.06)';
+            card.style.transform = '';
+        });
+    });
 }
 
+function selectCoach(coach) {
+    const idInput   = document.getElementById('selectedCoachId');
+    const nameInput = document.getElementById('selectedCoachName');
+    const label     = document.getElementById('coachPickerLabel');
+    const btn       = document.getElementById('coachPickerBtn');
+
+    if (!coach) {
+        // Auto assign
+        idInput.value   = '';
+        nameInput.value = '';
+        label.textContent = 'Hệ thống tự gán HLV phù hợp';
+        label.style.color = 'rgba(255,255,255,.35)';
+        btn.style.borderColor = 'rgba(255,255,255,.12)';
+    } else {
+        idInput.value   = coach.id;
+        nameInput.value = coach.name;
+
+        // Build label với avatar mini
+        const avatarEl = coach.avatar
+            ? `<img src="${coach.avatar}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;margin-right:8px;">`
+            : `<div style="width:28px;height:28px;background:linear-gradient(135deg,#302b63,#6366f1);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-right:8px;flex-shrink:0;"><i class="fas fa-user" style="color:#fff;font-size:.7rem;"></i></div>`;
+
+        btn.style.color = '#fff';
+        btn.style.borderColor = 'rgba(251,191,36,.5)';
+        label.innerHTML = `${avatarEl}<span style="color:#fff;font-weight:700;">${coach.name}</span>&nbsp;<small style="color:rgba(255,255,255,.5);">— Còn ${coach.remaining} chỗ</small>`;
+    }
+
+    document.getElementById('coachStatus')?.remove && (document.getElementById('coachStatus').innerHTML = '');
+    closeCoachPicker();
+}
+
+function closeCoachPicker() {
+    const modal = document.getElementById('coachPickerModal');
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+// ======= SUBMIT FORM → REDIRECT CHECKOUT =======
 document.getElementById('trainingForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -686,57 +705,23 @@ document.getElementById('trainingForm')?.addEventListener('submit', function(e) 
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                // Điền thông tin thẻ từ server
-                document.getElementById('sc-code').textContent   = data.student_code;
-                document.getElementById('sc-name').textContent   = data.student_name;
-                document.getElementById('sc-course').textContent = data.course_label;
-                document.getElementById('sc-date').textContent   = data.registered_at;
-                document.getElementById('sc-coach').textContent  = data.coach;
-                document.getElementById('sc-phone').textContent  = data.phone ? `SĐT: ${data.phone}` : '';
-
-                // Cập nhật lịch học
-                const scheduleEl = document.getElementById('sc-schedule');
-                if (scheduleEl) scheduleEl.textContent = data.schedule_days || '';
-
-                const timeEl = document.getElementById('sc-time');
-                if (timeEl) timeEl.textContent = data.schedule_time || '';
-
-                const slotEl = document.getElementById('sc-slots');
-                if (slotEl) {
-                    slotEl.textContent = data.is_full ? 'HLV đã đủ học viên tuần này' : `Còn ${data.remaining_slots} chỗ trống tuần này`;
-                    slotEl.style.color = data.is_full ? '#ef4444' : '#4ade80';
-                }
-
-                // Tạo QR Code với data từ server
-                const qrEl = document.getElementById('sc-qr');
-                qrEl.innerHTML = '';
-                new QRCode(qrEl, {
-                    text: data.qr_data,
-                    width: 120, height: 120,
-                    colorDark: '#0f0c29', colorLight: '#ffffff',
-                    correctLevel: QRCode.CorrectLevel.H
-                });
-
-                new bootstrap.Modal(document.getElementById('studentCardModal')).show();
-                this.reset();
+                // Redirect sang trang thanh toán
+                window.location.href = data.redirect;
             } else {
                 alert('Lỗi: ' + data.error);
+                btn.innerHTML = '<i class="fas fa-graduation-cap me-2"></i>Đăng ký khóa học ngay';
+                btn.disabled = false;
             }
         })
         .catch(err => {
             console.error('Training API error:', err);
             alert('Có lỗi xảy ra. Vui lòng thử lại.');
-        })
-        })
-        .finally(() => {
             btn.innerHTML = '<i class="fas fa-graduation-cap me-2"></i>Đăng ký khóa học ngay';
             btn.disabled = false;
         });
 });
 
-function printStudentCard() {
-    window.print();
-}
+function printStudentCard() { window.print(); }
 </script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

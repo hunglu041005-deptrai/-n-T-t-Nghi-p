@@ -1,5 +1,17 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
+
+// Thêm cột tickets_used nếu chưa có (kiểm tra trước để tránh lỗi duplicate)
+$col_check = $mysqli->query("SHOW COLUMNS FROM memberships LIKE 'tickets_used'");
+if ($col_check && $col_check->num_rows === 0) {
+    $mysqli->query("ALTER TABLE memberships ADD COLUMN tickets_used INT NOT NULL DEFAULT 0");
+}
+
+// Auto-expire và lấy membership hiện tại
+$activeMembership   = isLoggedIn() ? getActiveMembership((int)$_SESSION['user_id']) : null;
+$ticketsRemaining   = $activeMembership ? getMembershipTicketsRemaining($activeMembership) : 0;
+$allMemberships     = isLoggedIn() ? getUserMemberships((int)$_SESSION['user_id']) : [];
+
 require_once __DIR__ . '/includes/header.php';
 
 $plans = [
@@ -392,6 +404,39 @@ $plans = [
 .plan-card:nth-child(4) { animation-delay: .2s; }
 .plan-card:nth-child(5) { animation-delay: .25s; }
 .plan-card:nth-child(6) { animation-delay: .3s; }
+
+/* ── Active Membership Card ── */
+.active-member-card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(15,52,96,.3);
+    border: 1px solid rgba(74,222,128,.2);
+}
+.amc-header {
+    padding: 1.2rem 1.4rem 1rem;
+    background: rgba(0,0,0,.2);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    color: #fff;
+}
+.amc-body { padding: .8rem 1.2rem 1.2rem; }
+.amc-section {
+    background: rgba(255,255,255,.06);
+    border-radius: 10px;
+    padding: .7rem .9rem;
+    margin-bottom: .6rem;
+    color: #fff;
+}
+.badge-active {
+    background: rgba(74,222,128,.25);
+    color: #4ade80;
+    border: 1px solid rgba(74,222,128,.4);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .5px;
+}
 </style>
 
 <div class="membership-page">
@@ -515,7 +560,111 @@ $plans = [
                 <!-- Sidebar -->
                 <div class="col-lg-4">
 
-                    <!-- Benefits -->
+                    <!-- Active Membership Card (nếu có) -->
+                    <?php if ($activeMembership): ?>
+                    <div class="active-member-card mb-3">
+                        <div class="amc-header">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <i class="fas fa-id-card fa-lg" style="color:#4ade80;"></i>
+                                <span style="font-weight:800;font-size:1rem;">Thẻ hội viên của bạn</span>
+                                <?php if($activeMembership['status']==='active'): ?>
+                                    <span class="badge-active">ACTIVE</span>
+                                <?php endif; ?>
+                            </div>
+                            <div style="font-family:monospace;font-size:1.3rem;font-weight:900;letter-spacing:3px;color:#fbbf24;">
+                                <?php echo escape($activeMembership['member_code']); ?>
+                            </div>
+                        </div>
+                        <div class="amc-body">
+                            <!-- Ticket progress -->
+                            <div class="amc-section">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span style="font-size:.82rem;color:rgba(255,255,255,.7);">
+                                        <i class="fas fa-ticket-alt me-1"></i>Vé còn lại
+                                    </span>
+                                    <span style="font-weight:800;font-size:1.1rem;color:#4ade80;">
+                                        <?php echo $ticketsRemaining; ?> / <?php echo $activeMembership['free_tickets']; ?>
+                                    </span>
+                                </div>
+                                <?php
+                                $pct = $activeMembership['free_tickets'] > 0
+                                    ? round($ticketsRemaining / $activeMembership['free_tickets'] * 100)
+                                    : 0;
+                                $barColor = $pct > 50 ? '#4ade80' : ($pct > 20 ? '#fbbf24' : '#ef4444');
+                                ?>
+                                <div style="height:8px;background:rgba(255,255,255,.15);border-radius:4px;overflow:hidden;">
+                                    <div style="height:100%;width:<?php echo $pct; ?>%;background:<?php echo $barColor; ?>;border-radius:4px;transition:width .5s;"></div>
+                                </div>
+                                <div style="font-size:.72rem;color:rgba(255,255,255,.5);margin-top:.3rem;">
+                                    Đã dùng <?php echo $activeMembership['tickets_used'] ?? 0; ?> vé
+                                </div>
+                            </div>
+
+                            <!-- Plan info -->
+                            <div class="amc-section">
+                                <div style="font-size:.78rem;color:rgba(255,255,255,.5);">Gói đang dùng</div>
+                                <div style="font-weight:700;font-size:.88rem;">
+                                    <?php echo escape($activeMembership['plan_name']); ?>
+                                </div>
+                                <div style="font-size:.78rem;color:#a5b4fc;">
+                                    <?php echo escape($activeMembership['plan_detail']); ?>
+                                </div>
+                            </div>
+
+                            <!-- Expiry -->
+                            <?php
+                            $daysLeft = (int)ceil((strtotime($activeMembership['end_date']) - time()) / 86400);
+                            $expiryColor = $daysLeft <= 7 ? '#ef4444' : ($daysLeft <= 30 ? '#fbbf24' : '#4ade80');
+                            ?>
+                            <div class="amc-section">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div style="font-size:.72rem;color:rgba(255,255,255,.5);">Hiệu lực</div>
+                                        <div style="font-size:.82rem;font-weight:700;">
+                                            <?php echo date('d/m/Y', strtotime($activeMembership['start_date'])); ?>
+                                            →
+                                            <?php echo date('d/m/Y', strtotime($activeMembership['end_date'])); ?>
+                                        </div>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <div style="font-size:.72rem;color:rgba(255,255,255,.5);">Còn lại</div>
+                                        <div style="font-weight:800;color:<?php echo $expiryColor; ?>;">
+                                            <?php echo $daysLeft; ?> ngày
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Giá ưu đãi -->
+                            <div class="amc-section" style="background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fas fa-tag" style="color:#4ade80;"></i>
+                                    <div>
+                                        <div style="font-size:.78rem;color:rgba(255,255,255,.7);">Giá ưu đãi hội viên</div>
+                                        <div style="font-weight:800;color:#4ade80;font-size:1rem;">80,000đ / giờ</div>
+                                        <div style="font-size:.68rem;color:rgba(255,255,255,.4);">Giá cố định, không tăng giờ cao điểm</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Ticket log button -->
+                            <button onclick="showTicketLog(<?php echo $activeMembership['id']; ?>)"
+                                    class="btn w-100 mt-2 py-2"
+                                    style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:10px;font-size:.82rem;font-weight:600;">
+                                <i class="fas fa-history me-2"></i>Lịch sử dùng vé
+                            </button>
+
+                            <?php if($ticketsRemaining <= 0 || $daysLeft <= 0): ?>
+                            <div style="margin-top:.8rem;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:.6rem;font-size:.78rem;color:#fbbf24;text-align:center;">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                <?php echo $ticketsRemaining <= 0 ? 'Đã hết vé!' : 'Gói sắp hết hạn!'; ?>
+                                Gia hạn hoặc mua gói mới bên dưới.
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php else: ?>
+                    <!-- Benefits (chưa có gói) -->
                     <div class="benefits-section">
                         <h6 class="fw-bold mb-3" style="color:#111827;">
                             <i class="fas fa-star text-warning me-2"></i>Quyền lợi hội viên
@@ -523,39 +672,65 @@ $plans = [
                         <div class="benefit-item">
                             <div class="benefit-icon green"><i class="fas fa-ticket-alt"></i></div>
                             <div class="benefit-text">
-                                <h6>Vé ưu đãi 80K</h6>
-                                <p>Giá cố định, không tăng theo giờ cao điểm</p>
+                                <h6>Vé ưu đãi 80K cố định</h6>
+                                <p>Đặt sân với giá 80,000đ/giờ — không tăng giờ cao điểm</p>
                             </div>
                         </div>
                         <div class="benefit-item">
                             <div class="benefit-icon blue"><i class="fas fa-gift"></i></div>
                             <div class="benefit-text">
                                 <h6>Tặng vé miễn phí</h6>
-                                <p>Mua 10 tặng 1, mua 20 tặng 2, mua 30 tặng 3</p>
+                                <p>Mua 10 tặng 1 vé · Mua 20 tặng 2 vé · Mua 30 tặng 3 vé</p>
                             </div>
                         </div>
                         <div class="benefit-item">
                             <div class="benefit-icon orange"><i class="fas fa-clock"></i></div>
                             <div class="benefit-text">
                                 <h6>Thời hạn linh hoạt</h6>
-                                <p>Sử dụng trong 3, 6, 9 hoặc 12 tháng</p>
+                                <p>Sử dụng vé trong 3, 6, 9 hoặc 12 tháng kể từ ngày kích hoạt</p>
                             </div>
                         </div>
                         <div class="benefit-item">
                             <div class="benefit-icon purple"><i class="fas fa-headset"></i></div>
                             <div class="benefit-text">
                                 <h6>Hỗ trợ ưu tiên</h6>
-                                <p>Đặt sân nhanh, không cần chờ đợi</p>
+                                <p>Đặt sân nhanh — hội viên được ưu tiên giữ slot</p>
                             </div>
                         </div>
                     </div>
+                    <?php endif; ?>
+
+                    <!-- Lịch sử gói (nếu có từ 2+ gói) -->
+                    <?php if (count($allMemberships) > 1): ?>
+                    <div class="benefits-section mb-3">
+                        <h6 class="fw-bold mb-3" style="color:#111827;font-size:.88rem;">
+                            <i class="fas fa-history text-primary me-2"></i>Lịch sử gói hội viên
+                        </h6>
+                        <?php foreach (array_slice($allMemberships, 0, 3) as $m): ?>
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:.5rem 0;border-bottom:1px solid #f3f4f6;font-size:.8rem;">
+                            <div>
+                                <div style="font-weight:700;font-family:monospace;color:#374151;"><?php echo escape($m['member_code']); ?></div>
+                                <div style="color:#9ca3af;"><?php echo escape($m['plan_name']); ?></div>
+                            </div>
+                            <div style="text-align:right;">
+                                <?php
+                                $sColor = ['active'=>'#16a34a','expired'=>'#9ca3af','cancelled'=>'#ef4444'][$m['status']] ?? '#9ca3af';
+                                $sLabel = ['active'=>'Active','expired'=>'Hết hạn','cancelled'=>'Đã huỷ'][$m['status']] ?? $m['status'];
+                                ?>
+                                <div style="font-weight:700;color:<?php echo $sColor; ?>;"><?php echo $sLabel; ?></div>
+                                <div style="color:#9ca3af;"><?php echo date('d/m/Y', strtotime($m['end_date'])); ?></div>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endif; ?>
 
                     <!-- CTA -->
                     <div class="cta-section">
                         <h3>Cần tư vấn?</h3>
                         <p>Liên hệ ngay để được hỗ trợ chọn gói phù hợp nhất</p>
-                        <a href="tel:0123456789" class="btn-cta">
-                            <i class="fas fa-phone"></i> 0123.456.789
+                        <a href="tel:0968073500" class="btn-cta">
+                            <i class="fas fa-phone"></i> 0968.073.500
                         </a>
                     </div>
 
@@ -799,6 +974,13 @@ $plans = [
                         <i class="fas fa-info-circle me-2"></i>
                         Xuất trình mã thẻ hoặc QR code cho nhân viên khi đến sân
                     </div>
+
+                    <!-- Cash payment note -->
+                    <div id="mc-cash-note" style="display:none;margin-top:.8rem;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:1rem;font-size:.82rem;color:#92400e;">
+                        <div class="fw-bold mb-1"><i class="fas fa-info-circle me-2"></i>Thanh toán tiền mặt</div>
+                        Vui lòng mang thẻ này đến sân và thanh toán tại quầy khi đến sân lần đầu tiên.
+                        Thẻ sẽ được kích hoạt ngay sau khi nhận tiền.
+                    </div>
                 </div>
             </div>
 
@@ -840,6 +1022,27 @@ $plans = [
 }
 </style>
 
+<!-- ===== TICKET LOG MODAL ===== -->
+<div class="modal fade" id="ticketLogModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:20px;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#1a1a2e,#0f3460);padding:1.2rem 1.5rem;color:#fff;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <h6 class="fw-bold mb-0"><i class="fas fa-history me-2"></i>Lịch sử dùng vé</h6>
+                    <small style="color:rgba(255,255,255,.5);">Các lần sử dụng vé hội viên</small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" style="max-height:420px;overflow-y:auto;">
+                <div id="ticketLogBody" style="padding:1rem 1.4rem;"></div>
+            </div>
+            <div style="padding:.8rem 1.4rem;border-top:1px solid #f3f4f6;text-align:center;">
+                <button class="btn btn-sm py-1 px-3 fw-bold" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
 const plansData = {
@@ -857,14 +1060,13 @@ function registerPlan(planId) {
     currentPlanId = planId;
     const p = plansData[planId];
 
-    // Fill payment modal
     document.getElementById('pm-plan-badge').textContent = p.badge;
     document.getElementById('pm-plan-label').textContent = p.label;
     document.getElementById('pm-plan-name').textContent  = p.name;
     document.getElementById('pm-months').textContent     = `⏱ ${p.months} Tháng`;
     document.getElementById('pm-free').textContent       = `🎁 Miễn phí ${p.free} vé`;
     document.getElementById('pm-price-sub').textContent  = p.price.toLocaleString('vi-VN') + 'đ';
-    document.getElementById('pm-free-val').textContent   = `+${p.free} vé`;
+    document.getElementById('pm-free-val').textContent   = `+${p.free} vé miễn phí`;
     document.getElementById('pm-total').textContent      = p.price.toLocaleString('vi-VN') + 'đ';
 
     new bootstrap.Modal(document.getElementById('paymentModal')).show();
@@ -894,16 +1096,17 @@ document.getElementById('btn-confirm-payment').addEventListener('click', functio
     const formData = new FormData();
     formData.append('plan_id', currentPlanId);
     formData.append('payment_method', method);
+    formData.append('action', 'register');
 
     fetch('api/membership.php', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                // Close payment modal
                 bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-
-                // Fill member card
                 showMemberCard(data);
+            } else if (data.existing) {
+                // Đã có gói active
+                alert(`⚠️ ${data.error}`);
             } else {
                 alert('Lỗi: ' + data.error);
             }
@@ -916,30 +1119,44 @@ document.getElementById('btn-confirm-payment').addEventListener('click', functio
 });
 
 function showMemberCard(data) {
-    // Fill card info
-    document.getElementById('mc-code').textContent   = data.member_code;
-    document.getElementById('mc-name').textContent   = data.user_name;
-    document.getElementById('mc-plan').textContent   = `${data.months} tháng`;
-    document.getElementById('mc-start').textContent  = formatDate(data.start_date);
-    document.getElementById('mc-end').textContent    = formatDate(data.end_date);
-    document.getElementById('mc-tickets').textContent = `${data.plan_name} : ${data.plan_detail} — ${data.free_tickets} vé miễn phí`;
+    document.getElementById('mc-code').textContent    = data.member_code;
+    document.getElementById('mc-name').textContent    = data.user_name;
+    document.getElementById('mc-plan').textContent    = `${data.months} tháng`;
+    document.getElementById('mc-start').textContent   = formatDate(data.start_date);
+    document.getElementById('mc-end').textContent     = formatDate(data.end_date);
 
-    // Generate QR code
-    const qrContainer = document.getElementById('mc-qr');
-    qrContainer.innerHTML = '';
-    new QRCode(qrContainer, {
-        text: `BADMINTONPRO|${data.member_code}|${data.user_name}|${data.end_date}`,
-        width: 120,
-        height: 120,
-        colorDark: '#1a1a2e',
-        colorLight: '#ffffff',
+    // Hiển thị vé còn lại
+    document.getElementById('mc-tickets').innerHTML = `
+        <i class="fas fa-ticket-alt me-2"></i>
+        ${data.plan_name} : ${data.plan_detail}
+        — <strong>${data.free_tickets} vé miễn phí</strong>
+        &nbsp;·&nbsp; Giá ưu đãi <strong style="color:#fbbf24;">${(data.member_price||80000).toLocaleString('vi-VN')}đ/giờ</strong>
+    `;
+
+    // Thêm badge payment status
+    const pmStatus = data.payment_status === 'pending'
+        ? '<div style="background:rgba(251,191,36,.2);border:1px solid rgba(251,191,36,.4);border-radius:8px;padding:4px 10px;font-size:.72rem;font-weight:700;color:#fbbf24;">PENDING PAYMENT</div>'
+        : '';
+    document.getElementById('mc-status').outerHTML = pmStatus ||
+        '<div style="background:rgba(74,222,128,.2);border:1px solid rgba(74,222,128,.4);border-radius:8px;padding:4px 10px;font-size:.72rem;font-weight:700;color:#4ade80;" id="mc-status">ACTIVE</div>';
+
+    // QR code
+    const qrEl = document.getElementById('mc-qr');
+    qrEl.innerHTML = '';
+    new QRCode(qrEl, {
+        text: `BADMINTONPRO-MEMBER|${data.member_code}|${data.user_name}|${data.end_date}`,
+        width: 120, height: 120,
+        colorDark: '#1a1a2e', colorLight: '#ffffff',
         correctLevel: QRCode.CorrectLevel.H
     });
 
-    // Show card modal
-    setTimeout(() => {
-        new bootstrap.Modal(document.getElementById('memberCardModal')).show();
-    }, 400);
+    // Cash = hiện hướng dẫn thêm
+    const cashNote = document.getElementById('mc-cash-note');
+    if (cashNote) {
+        cashNote.style.display = data.payment_method === 'cash' ? 'block' : 'none';
+    }
+
+    setTimeout(() => new bootstrap.Modal(document.getElementById('memberCardModal')).show(), 400);
 }
 
 function formatDate(dateStr) {
@@ -947,8 +1164,52 @@ function formatDate(dateStr) {
     return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
 }
 
-function printMemberCard() {
-    window.print();
+function printMemberCard() { window.print(); }
+
+// ── Lịch sử dùng vé ──
+function showTicketLog(membershipId) {
+    const modal = new bootstrap.Modal(document.getElementById('ticketLogModal'));
+    const body  = document.getElementById('ticketLogBody');
+    body.innerHTML = '<div class="text-center py-3"><div class="spinner-border text-primary"></div></div>';
+    modal.show();
+
+    fetch('api/membership.php?action=ticket_logs')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.logs || data.logs.length === 0) {
+                body.innerHTML = `
+                    <div style="text-align:center;padding:2rem;color:#9ca3af;">
+                        <i class="fas fa-ticket-alt fa-2x mb-2 d-block" style="opacity:.3;"></i>
+                        Chưa có lịch sử dùng vé
+                    </div>`;
+                return;
+            }
+            let html = '';
+            data.logs.forEach(log => {
+                const isUse    = log.action === 'use';
+                const isRefund = log.action === 'refund';
+                const icon     = isRefund ? 'fa-undo' : (isUse ? 'fa-minus-circle' : 'fa-plus-circle');
+                const color    = isRefund ? '#10b981' : (isUse ? '#ef4444' : '#3b82f6');
+                const delta    = log.tickets_delta > 0 ? `+${log.tickets_delta}` : log.tickets_delta;
+
+                html += `
+                    <div style="display:flex;align-items:center;gap:.8rem;padding:.7rem 0;border-bottom:1px solid #f3f4f6;">
+                        <div style="width:36px;height:36px;background:${color}20;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="fas ${icon}" style="color:${color};"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-weight:600;font-size:.85rem;">${log.note || (isUse ? 'Dùng vé' : 'Hoàn vé')}</div>
+                            ${log.court_name ? `<div style="font-size:.75rem;color:#6b7280;"><i class="fas fa-map-marker-alt me-1"></i>${log.court_name}</div>` : ''}
+                            ${log.booking_date ? `<div style="font-size:.75rem;color:#9ca3af;">${log.booking_date} · ${log.start_time||''} – ${log.end_time||''}</div>` : ''}
+                            <div style="font-size:.72rem;color:#9ca3af;">${new Date(log.created_at).toLocaleString('vi-VN')}</div>
+                        </div>
+                        <div style="font-weight:800;font-size:1rem;color:${color};">${delta} vé</div>
+                    </div>
+                `;
+            });
+            body.innerHTML = html;
+        })
+        .catch(() => { body.innerHTML = '<div class="alert alert-danger">Lỗi tải dữ liệu</div>'; });
 }
 </script>
 

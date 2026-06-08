@@ -4,6 +4,33 @@ error_reporting(0);
 ini_set('display_errors', 0);
 require_once __DIR__ . '/../db.php';
 
+// Auto-migration: đảm bảo bảng + cột tồn tại
+$mysqli->query("CREATE TABLE IF NOT EXISTS training_registrations (
+    id               INT AUTO_INCREMENT PRIMARY KEY,
+    student_code     VARCHAR(20)  UNIQUE NOT NULL,
+    student_name     VARCHAR(100) NOT NULL,
+    phone            VARCHAR(20)  NOT NULL,
+    email            VARCHAR(100) DEFAULT NULL,
+    course           VARCHAR(20)  NOT NULL,
+    age_group        VARCHAR(30)  DEFAULT NULL,
+    preferred_time   VARCHAR(60)  DEFAULT NULL,
+    preferred_coach  VARCHAR(100) DEFAULT NULL,
+    current_level    VARCHAR(50)  DEFAULT NULL,
+    learning_goals   TEXT         DEFAULT NULL,
+    coach_id         INT          DEFAULT NULL,
+    schedule_days    VARCHAR(100) DEFAULT NULL,
+    schedule_time    VARCHAR(60)  DEFAULT NULL,
+    week_start       DATE         DEFAULT NULL,
+    qr_code          VARCHAR(50)  DEFAULT NULL,
+    status           VARCHAR(30)  NOT NULL DEFAULT 'pending_payment',
+    payment_method   VARCHAR(30)  DEFAULT NULL,
+    payment_at       DATETIME     DEFAULT NULL,
+    created_at       DATETIME     DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+$mysqli->query("ALTER TABLE training_registrations ADD COLUMN IF NOT EXISTS payment_method VARCHAR(30) DEFAULT NULL");
+$mysqli->query("ALTER TABLE training_registrations ADD COLUMN IF NOT EXISTS payment_at DATETIME DEFAULT NULL");
+$mysqli->query("ALTER TABLE training_registrations ADD COLUMN IF NOT EXISTS status VARCHAR(30) NOT NULL DEFAULT 'pending_payment'");
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['success' => false, 'error' => 'Method not allowed.']);
@@ -17,6 +44,7 @@ $course          = $_POST['course']               ?? '';
 $age_group       = $_POST['age_group']            ?? '';
 $preferred_time  = $_POST['preferred_time']       ?? '';
 $preferred_coach = trim($_POST['preferred_coach'] ?? '');
+$preferred_coach_id = intval($_POST['preferred_coach_id'] ?? 0);
 $current_level   = $_POST['current_level']        ?? '';
 $learning_goals  = trim($_POST['learning_goals']  ?? '');
 
@@ -47,8 +75,14 @@ $coach_data = null;
 // Ngày đầu tuần hiện tại (Monday)
 $week_start = date('Y-m-d', strtotime('monday this week'));
 
-// Nếu user chọn HLV cụ thể
-if ($preferred_coach && $preferred_coach !== 'Chưa chọn') {
+// Nếu user chọn HLV cụ thể (ưu tiên theo ID, fallback theo tên)
+if ($preferred_coach_id > 0) {
+    $stmt = $mysqli->prepare('SELECT id, name, max_students_per_week FROM coaches WHERE id = ? AND status = 1 LIMIT 1');
+    $stmt->bind_param('i', $preferred_coach_id);
+    $stmt->execute();
+    $coach_data = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+} elseif ($preferred_coach && $preferred_coach !== 'Chưa chọn') {
     $stmt = $mysqli->prepare('SELECT id, name, max_students_per_week FROM coaches WHERE name = ? AND status = 1 LIMIT 1');
     $stmt->bind_param('s', $preferred_coach);
     $stmt->execute();
@@ -131,21 +165,22 @@ do {
     $check->close();
 } while ($exists);
 
-// ===== LƯU VÀO DATABASE =====
+// ===== LƯU VÀO DATABASE (trạng thái pending_payment) =====
 $stmt = $mysqli->prepare(
     'INSERT INTO training_registrations
      (student_code, student_name, phone, email, course, age_group, preferred_time, 
       preferred_coach, current_level, learning_goals, coach_id, schedule_days, 
-      schedule_time, week_start, qr_code)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+      schedule_time, week_start, qr_code, status)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
 );
-$qr_code = $student_code; // QR chứa mã học viên
+$qr_code = $student_code;
+$reg_status = 'pending_payment';
 $stmt->bind_param(
-    'ssssssssssissss',
+    'ssssssssssisssss',
     $student_code, $student_name, $phone, $email,
     $course, $age_group, $preferred_time, $preferred_coach,
     $current_level, $learning_goals, $coach_id,
-    $scheduleStr, $preferred_time, $week_start, $qr_code
+    $scheduleStr, $preferred_time, $week_start, $qr_code, $reg_status
 );
 
 if (!$stmt->execute()) {
@@ -153,39 +188,40 @@ if (!$stmt->execute()) {
     echo json_encode(['success' => false, 'error' => 'Lỗi lưu dữ liệu: ' . $stmt->error]);
     exit;
 }
+$registration_id = $mysqli->insert_id;
 $stmt->close();
 
-// Gửi thông báo nếu đã đăng nhập
-if (!empty($_SESSION['user_id'])) {
-    try {
-        require_once __DIR__ . '/../includes/notification-system.php';
-        $ns = new NotificationSystem();
-        $ns->notifyTrainingRegistered(
-            (int)$_SESSION['user_id'],
-            $student_code,
-            $course_labels[$course],
-            $coach_name
-        );
-    } catch (Exception $e) {}
-}
+// Gửi thông báo nếu đã đăng nhập — CHỈ gửi sau khi thanh toán thành công
+// (chuyển sang training-checkout.php xử lý)
+
+// Giá khóa học
+$course_prices = [
+    'beginner'     => 1800000,
+    'intermediate' => 2800000,
+    'advanced'     => 4500000,
+];
+$course_price = $course_prices[$course] ?? 0;
 
 // Slot còn lại
 $remaining = $coach_data['max_students_per_week'] - $currentCount - 1;
 
 echo json_encode([
-    'success'        => true,
-    'student_code'   => $student_code,
-    'student_name'   => $student_name,
-    'phone'          => $phone,
-    'course'         => $course,
-    'course_label'   => $course_labels[$course],
-    'coach'          => $coach_name,
-    'coach_id'       => $coach_id,
-    'schedule_days'  => $scheduleVN,
-    'schedule_time'  => $preferred_time,
-    'week_start'     => $week_start,
-    'remaining_slots'=> $remaining,
-    'is_full'        => $remaining <= 0,
-    'registered_at'  => date('d/m/Y'),
-    'qr_data'        => "BADMINTONPRO-HV|{$student_code}|{$student_name}|{$course_labels[$course]}|{$coach_name}|{$scheduleVN}|{$phone}",
+    'success'         => true,
+    'registration_id' => $registration_id,
+    'student_code'    => $student_code,
+    'student_name'    => $student_name,
+    'phone'           => $phone,
+    'course'          => $course,
+    'course_label'    => $course_labels[$course],
+    'course_price'    => $course_price,
+    'coach'           => $coach_name,
+    'coach_id'        => $coach_id,
+    'schedule_days'   => $scheduleVN,
+    'schedule_time'   => $preferred_time,
+    'week_start'      => $week_start,
+    'remaining_slots' => $remaining,
+    'is_full'         => $remaining <= 0,
+    'registered_at'   => date('d/m/Y'),
+    'redirect'        => 'training-checkout.php?reg=' . $registration_id . '&code=' . urlencode($student_code),
+    'qr_data'         => "BADMINTONPRO-HV|{$student_code}|{$student_name}|{$course_labels[$course]}|{$coach_name}|{$scheduleVN}|{$phone}",
 ]);

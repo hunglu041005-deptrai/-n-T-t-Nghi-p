@@ -1,117 +1,200 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
-
-// Chặn admin truy cập trang web thường
 blockAdminFromPublic();
 
-// Kiểm tra đăng nhập
 if (!isLoggedIn()) {
     header('Location: login.php?redirect=checkout.php');
     exit;
 }
 
-// Xử lý đặt hàng
-$order_success = false;
-$order_id = null;
-$error_message = '';
+// ── Auto-migrate orders table ──
+$mysqli->query("CREATE TABLE IF NOT EXISTS orders (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    user_id         INT NOT NULL,
+    order_number    VARCHAR(30) UNIQUE NOT NULL,
+    status          VARCHAR(30) NOT NULL DEFAULT 'pending',
+    payment_status  VARCHAR(30) NOT NULL DEFAULT 'pending',
+    payment_method  VARCHAR(50) DEFAULT 'cod',
+    subtotal        DECIMAL(10,0) NOT NULL DEFAULT 0,
+    shipping_amount DECIMAL(10,0) NOT NULL DEFAULT 0,
+    discount_amount DECIMAL(10,0) NOT NULL DEFAULT 0,
+    total_amount    DECIMAL(10,0) NOT NULL DEFAULT 0,
+    customer_name   VARCHAR(100) NOT NULL DEFAULT '',
+    customer_email  VARCHAR(150) NOT NULL DEFAULT '',
+    customer_phone  VARCHAR(20)  NOT NULL DEFAULT '',
+    shipping_province VARCHAR(100),
+    shipping_district VARCHAR(100),
+    shipping_ward     VARCHAR(100),
+    shipping_address  TEXT,
+    notes           TEXT,
+    created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_user   (user_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+$mysqli->query("CREATE TABLE IF NOT EXISTS order_items (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    order_id        INT NOT NULL,
+    product_id      INT NOT NULL,
+    product_name    VARCHAR(200) NOT NULL,
+    product_image   VARCHAR(255),
+    product_price   DECIMAL(10,0) NOT NULL DEFAULT 0,
+    quantity        INT NOT NULL DEFAULT 1,
+    subtotal        DECIMAL(10,0) NOT NULL DEFAULT 0,
+    INDEX idx_order   (order_id),
+    INDEX idx_product (product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+// ── Thêm tất cả cột còn thiếu (orders) ──
+$orderCols = [
+    'payment_method'    => "ALTER TABLE orders ADD COLUMN payment_method VARCHAR(50) DEFAULT 'cod'",
+    'customer_name'     => "ALTER TABLE orders ADD COLUMN customer_name VARCHAR(100) NOT NULL DEFAULT ''",
+    'customer_email'    => "ALTER TABLE orders ADD COLUMN customer_email VARCHAR(150) NOT NULL DEFAULT ''",
+    'customer_phone'    => "ALTER TABLE orders ADD COLUMN customer_phone VARCHAR(20) NOT NULL DEFAULT ''",
+    'subtotal'          => "ALTER TABLE orders ADD COLUMN subtotal DECIMAL(10,0) NOT NULL DEFAULT 0",
+    'shipping_amount'   => "ALTER TABLE orders ADD COLUMN shipping_amount DECIMAL(10,0) NOT NULL DEFAULT 0",
+    'discount_amount'   => "ALTER TABLE orders ADD COLUMN discount_amount DECIMAL(10,0) NOT NULL DEFAULT 0",
+    'shipping_province' => "ALTER TABLE orders ADD COLUMN shipping_province VARCHAR(100)",
+    'shipping_district' => "ALTER TABLE orders ADD COLUMN shipping_district VARCHAR(100)",
+    'shipping_ward'     => "ALTER TABLE orders ADD COLUMN shipping_ward VARCHAR(100)",
+    'shipping_address'  => "ALTER TABLE orders ADD COLUMN shipping_address TEXT",
+    'notes'             => "ALTER TABLE orders ADD COLUMN notes TEXT",
+    'total_amount'      => "ALTER TABLE orders ADD COLUMN total_amount DECIMAL(10,0) NOT NULL DEFAULT 0",
+];
+foreach ($orderCols as $col => $sql) {
+    $r = $mysqli->query("SHOW COLUMNS FROM orders LIKE '$col'");
+    if ($r && $r->num_rows === 0) $mysqli->query($sql);
+}
+
+// ── Thêm cột còn thiếu (order_items) ──
+$itemCols = [
+    'product_image' => "ALTER TABLE order_items ADD COLUMN product_image VARCHAR(255)",
+    'product_price' => "ALTER TABLE order_items ADD COLUMN product_price DECIMAL(10,0) NOT NULL DEFAULT 0",
+];
+foreach ($itemCols as $col => $sql) {
+    $r = $mysqli->query("SHOW COLUMNS FROM order_items LIKE '$col'");
+    if ($r && $r->num_rows === 0) $mysqli->query($sql);
+}
+
+$order_success   = false;
+$order_number    = '';
+$order_id_result = null;
+$error_message   = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     $cart_data = json_decode($_POST['cart_data'] ?? '[]', true);
-    $shipping_info = [
-        'name' => trim($_POST['shipping_name'] ?? ''),
-        'phone' => trim($_POST['shipping_phone'] ?? ''),
-        'address' => trim($_POST['shipping_address'] ?? ''),
-        'note' => trim($_POST['order_note'] ?? '')
-    ];
-    
-    // Validation
-    if (empty($shipping_info['name']) || empty($shipping_info['phone']) || empty($shipping_info['address'])) {
+
+    $name     = trim($_POST['customer_name']  ?? '');
+    $phone    = trim($_POST['customer_phone'] ?? '');
+    $province = trim($_POST['province']       ?? '');
+    $district = trim($_POST['district']       ?? '');
+    $ward     = trim($_POST['ward']           ?? '');
+    $addr     = trim($_POST['address_detail'] ?? '');
+    $note     = trim($_POST['order_note']     ?? '');
+    $method   = trim($_POST['payment_method'] ?? 'cod');
+    $email    = $_SESSION['email'] ?? '';
+
+    $full_address = implode(', ', array_filter([$addr, $ward, $district, $province]));
+
+    if (!$name || !$phone || !$province || !$district || !$addr) {
         $error_message = 'Vui lòng điền đầy đủ thông tin giao hàng.';
     } elseif (empty($cart_data)) {
-        $error_message = 'Giỏ hàng trống. Vui lòng thêm sản phẩm trước khi đặt hàng.';
+        $error_message = 'Giỏ hàng trống.';
     } else {
         try {
-            // Tạo bảng orders nếu chưa có
-            $create_orders_table = "CREATE TABLE IF NOT EXISTS orders (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                order_number VARCHAR(20) UNIQUE NOT NULL,
-                total_amount DECIMAL(10,0) NOT NULL,
-                shipping_name VARCHAR(100) NOT NULL,
-                shipping_phone VARCHAR(20) NOT NULL,
-                shipping_address TEXT NOT NULL,
-                order_note TEXT,
-                status ENUM('pending', 'confirmed', 'shipping', 'delivered', 'cancelled') DEFAULT 'pending',
-                payment_status ENUM('pending', 'paid', 'failed') DEFAULT 'pending',
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                INDEX idx_user_orders (user_id),
-                INDEX idx_order_status (status)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-            $mysqli->query($create_orders_table);
-            
-            // Tạo bảng order_items nếu chưa có
-            $create_order_items_table = "CREATE TABLE IF NOT EXISTS order_items (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                order_id INT NOT NULL,
-                product_id INT NOT NULL,
-                product_name VARCHAR(200) NOT NULL,
-                product_price DECIMAL(10,0) NOT NULL,
-                quantity INT NOT NULL,
-                subtotal DECIMAL(10,0) NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_order_items (order_id),
-                INDEX idx_product_orders (product_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-            $mysqli->query($create_order_items_table);
-            
-            // Tính tổng tiền
-            $total_amount = 0;
+            $subtotal = 0;
             foreach ($cart_data as $item) {
-                $total_amount += $item['price'] * $item['quantity'];
+                $subtotal += ($item['price'] ?? 0) * ($item['quantity'] ?? 1);
             }
-            
-            // Tạo mã đơn hàng
-            $order_number = 'ORD' . date('Ymd') . sprintf('%04d', rand(1, 9999));
-            
-            // Bắt đầu transaction
+            $shipping = $subtotal >= 500000 ? 0 : 30000;
+            $total    = $subtotal + $shipping;
+
+            // Unique order number
+            do {
+                $order_number = 'ORD' . date('ymd') . strtoupper(substr(md5(uniqid(rand(),true)), 0, 5));
+                $chk = $mysqli->prepare('SELECT id FROM orders WHERE order_number = ?');
+                $chk->bind_param('s', $order_number);
+                $chk->execute(); $chk->store_result();
+                $exists = $chk->num_rows > 0;
+                $chk->close();
+            } while ($exists);
+
             $mysqli->begin_transaction();
-            
-            // Tạo đơn hàng
-            $order_stmt = $mysqli->prepare('INSERT INTO orders (user_id, order_number, total_amount, shipping_name, shipping_phone, shipping_address, order_note) VALUES (?, ?, ?, ?, ?, ?, ?)');
-            $order_stmt->bind_param('isisiss', $_SESSION['user_id'], $order_number, $total_amount, $shipping_info['name'], $shipping_info['phone'], $shipping_info['address'], $shipping_info['note']);
-            
-            if ($order_stmt->execute()) {
-                $order_id = $mysqli->insert_id;
-                
-                // Thêm items vào đơn hàng
-                $item_stmt = $mysqli->prepare('INSERT INTO order_items (order_id, product_id, product_name, product_price, quantity, subtotal) VALUES (?, ?, ?, ?, ?, ?)');
-                
+
+            $ins = $mysqli->prepare(
+                'INSERT INTO orders
+                 (user_id, order_number, status, payment_status, payment_method,
+                  subtotal, shipping_amount, discount_amount, total_amount,
+                  customer_name, customer_email, customer_phone,
+                  shipping_province, shipping_district, shipping_ward, shipping_address, notes)
+                 VALUES (?,?,?,?,?,?,?,0,?,?,?,?,?,?,?,?,?)'
+            );
+
+            $status  = 'pending';
+            $pstatus = ($method === 'cod') ? 'unpaid' : 'pending';
+
+            $ins->bind_param(
+                'issssiiissssssss',
+                $_SESSION['user_id'], $order_number,
+                $status, $pstatus, $method,
+                $subtotal, $shipping, $total,
+                $name, $email, $phone,
+                $province, $district, $ward, $full_address, $note
+            );
+
+            if ($ins->execute()) {
+                $order_id_result = $mysqli->insert_id;
+
+                $item_stmt = $mysqli->prepare(
+                    'INSERT INTO order_items (order_id, product_id, product_name, product_image, product_price, quantity, subtotal)
+                     VALUES (?,?,?,?,?,?,?)'
+                );
+
                 foreach ($cart_data as $item) {
-                    $subtotal = $item['price'] * $item['quantity'];
-                    $item_stmt->bind_param('iisiii', $order_id, $item['id'], $item['name'], $item['price'], $item['quantity'], $subtotal);
+                    $pid      = (int)($item['id']       ?? 0);
+                    $pname    = $item['name']    ?? '';
+                    $pimage   = $item['image']   ?? '';
+                    $pprice   = (int)($item['price']    ?? 0);
+                    $qty      = (int)($item['quantity'] ?? 1);
+                    $psub     = $pprice * $qty;
+
+                    $item_stmt->bind_param('iissiii', $order_id_result, $pid, $pname, $pimage, $pprice, $qty, $psub);
                     $item_stmt->execute();
-                    
-                    // Cập nhật tồn kho
-                    $update_stock = $mysqli->prepare('UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ? AND stock_quantity >= ?');
-                    $update_stock->bind_param('iii', $item['quantity'], $item['id'], $item['quantity']);
-                    $update_stock->execute();
+
+                    // Deduct stock with lock
+                    $stock = $mysqli->prepare(
+                        'UPDATE products SET stock_quantity = stock_quantity - ?
+                         WHERE id = ? AND stock_quantity >= ?'
+                    );
+                    $stock->bind_param('iii', $qty, $pid, $qty);
+                    $stock->execute();
+                    $stock->close();
                 }
-                
                 $item_stmt->close();
                 $mysqli->commit();
                 $order_success = true;
-                
+
+                // Xử lý theo phương thức thanh toán
+                if ($method === 'bank') {
+                    // Lưu thông tin chờ xác nhận
+                } elseif ($method === 'momo' || $method === 'vnpay') {
+                    // Production: redirect to gateway
+                    // For now: mark as paid (demo)
+                    $upd = $mysqli->prepare("UPDATE orders SET payment_status='paid' WHERE id=?");
+                    $upd->bind_param('i', $order_id_result);
+                    $upd->execute(); $upd->close();
+                }
+
             } else {
                 $mysqli->rollback();
-                $error_message = 'Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại.';
+                $error_message = 'Lỗi tạo đơn hàng: ' . $mysqli->error;
             }
-            
-            $order_stmt->close();
-            
+            $ins->close();
+
         } catch (Exception $e) {
             $mysqli->rollback();
-            $error_message = 'Có lỗi xảy ra: ' . $e->getMessage();
+            $error_message = 'Lỗi: ' . $e->getMessage();
         }
     }
 }
@@ -119,330 +202,708 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<!-- Checkout Page -->
-<section class="bg-primary text-white py-3">
-    <div class="container">
-        <h1 class="h4 mb-0">
-            <i class="fas fa-shopping-cart me-2"></i>Thanh toán
-        </h1>
-    </div>
-</section>
+<style>
+/* ===== CHECKOUT PAGE ===== */
+.co-page { background: #f8fafc; min-height: 100vh; padding: 2rem 0 4rem; }
 
-<section class="py-4">
-    <div class="container">
-        <?php if ($order_success): ?>
-            <!-- Order Success -->
-            <div class="row justify-content-center">
-                <div class="col-md-8">
-                    <div class="card border-success">
-                        <div class="card-header bg-success text-white text-center">
-                            <h4 class="mb-0">
-                                <i class="fas fa-check-circle me-2"></i>Đặt hàng thành công!
-                            </h4>
+/* Breadcrumb */
+.co-breadcrumb { font-size:.82rem; color:#9ca3af; margin-bottom:2rem; display:flex; align-items:center; gap:.4rem; }
+.co-breadcrumb a { color:#6366f1; text-decoration:none; }
+
+/* Steps */
+.co-steps { display:flex; align-items:center; background:#fff; border-radius:16px; padding:1rem 1.5rem;
+            box-shadow:0 2px 12px rgba(0,0,0,.06); margin-bottom:2rem; }
+.co-step { display:flex; align-items:center; gap:.6rem; flex:1; }
+.co-step-dot { width:32px; height:32px; border-radius:50%; display:flex; align-items:center;
+               justify-content:center; font-weight:800; font-size:.85rem; flex-shrink:0; }
+.co-step-dot.done   { background:#10b981; color:#fff; }
+.co-step-dot.active { background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff;
+                      box-shadow:0 4px 12px rgba(99,102,241,.4); }
+.co-step-dot.idle   { background:#e5e7eb; color:#9ca3af; }
+.co-step-label      { font-size:.8rem; font-weight:700; color:#374151; }
+.co-step-line       { flex-grow:1; height:2px; background:#e5e7eb; max-width:60px; }
+.co-step-line.done  { background:#10b981; }
+
+/* Cards */
+.co-card { background:#fff; border-radius:20px; box-shadow:0 4px 20px rgba(0,0,0,.06);
+           border:1px solid #f0f0f0; overflow:hidden; margin-bottom:1.5rem; }
+.co-card-header { padding:1.2rem 1.5rem; border-bottom:1px solid #f3f4f6;
+                  font-weight:800; color:#111827; display:flex; align-items:center; gap:.6rem; }
+.co-card-header i { color:#6366f1; }
+.co-card-body { padding:1.5rem; }
+
+/* Form */
+.co-label { font-size:.82rem; font-weight:700; color:#374151; margin-bottom:.35rem; display:block; }
+.co-label span { color:#ef4444; margin-left:2px; }
+.co-input, .co-select, .co-textarea {
+    width:100%; background:#f9fafb; border:1.5px solid #e5e7eb; border-radius:12px;
+    padding:.7rem 1rem; font-size:.9rem; color:#111827; transition:all .2s;
+}
+.co-input:focus, .co-select:focus, .co-textarea:focus {
+    outline:none; border-color:#6366f1; background:#fff;
+    box-shadow:0 0 0 3px rgba(99,102,241,.12);
+}
+.co-textarea { resize:none; }
+.co-select { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+             background-repeat:no-repeat; background-position:right 1rem center; }
+
+/* Payment methods */
+.pm-card {
+    border: 2px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 1rem 1.2rem;
+    cursor: pointer;
+    transition: all .25s ease;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: .75rem;
+    user-select: none;
+    background: #fff;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,.04);
+}
+.pm-card:hover {
+    border-color: #28a745;
+    background: #f6fff8;
+    box-shadow: 0 4px 16px rgba(40,167,69,.1);
+    transform: translateY(-1px);
+}
+.pm-card.active {
+    border-color: #28a745;
+    background: linear-gradient(135deg, #f0fdf4, #e8fdf0);
+    box-shadow: 0 4px 20px rgba(40,167,69,.15);
+}
+.pm-card.active .pm-title { color: #16a34a !important; }
+.pm-icon-wrap {
+    width: 50px; height: 50px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.pm-text { flex: 1; min-width: 0; }
+.pm-title { font-weight: 700; font-size: .93rem; color: #1a1a2e; margin-bottom: 2px; transition: color .2s; }
+.pm-sub   { font-size: .78rem; color: #6b7280; }
+.pm-check-wrap {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: #28a745; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .8rem;
+    opacity: 0; transform: scale(.5);
+    transition: all .2s ease; flex-shrink: 0;
+}
+.pm-card.active .pm-check-wrap { opacity: 1; transform: scale(1); }
+
+/* Bank detail */
+#bankDetail {
+    background: #fffdf0;
+    border: 1px solid #fde68a;
+    border-radius: 14px;
+    padding: 1rem 1.2rem;
+    margin-bottom: .7rem;
+    display: none;
+    animation: slideDown .2s ease;
+}
+@keyframes slideDown {
+    from { opacity:0; transform:translateY(-8px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+#bankDetail .bank-ref { font-family:monospace; font-weight:800; color:#6366f1;
+                        font-size:1rem; letter-spacing:1px; }
+
+/* Order summary */
+.os-item { display:flex; align-items:center; gap:.8rem; padding:.6rem 0;
+           border-bottom:1px solid #f3f4f6; }
+.os-item:last-child { border:none; }
+.os-item img { width:48px; height:48px; object-fit:cover; border-radius:10px;
+               border:1px solid #f0f0f0; flex-shrink:0; }
+.os-item-name { font-weight:700; font-size:.85rem; color:#111827; }
+.os-item-meta { font-size:.75rem; color:#9ca3af; }
+.os-total-row { display:flex; justify-content:space-between; align-items:center;
+                padding:.45rem 0; font-size:.88rem; }
+.os-total-row.final { font-weight:800; font-size:1rem; color:#111827;
+                      border-top:2px solid #f3f4f6; margin-top:.5rem; padding-top:.8rem; }
+.os-total-row .val { font-weight:700; }
+.os-total-row .free { color:#10b981; font-weight:700; }
+.os-total-row.final .val { color:#ef4444; font-size:1.1rem; }
+
+/* CTA */
+.btn-place-order {
+    background:linear-gradient(135deg,#6366f1,#8b5cf6);
+    color:#fff; border:none; border-radius:14px; padding:1rem 2rem;
+    font-weight:900; font-size:1rem; width:100%; cursor:pointer;
+    box-shadow:0 8px 25px rgba(99,102,241,.35); transition:all .2s;
+}
+.btn-place-order:hover { transform:translateY(-2px); box-shadow:0 12px 35px rgba(99,102,241,.45); }
+.btn-place-order:disabled { opacity:.6; cursor:not-allowed; transform:none; }
+
+/* Policy */
+.policy-item { display:flex; align-items:center; gap:.7rem; padding:.4rem 0;
+               font-size:.82rem; color:#4b5563; border-bottom:1px solid #f9fafb; }
+.policy-item:last-child { border:none; }
+.policy-icon { width:32px; height:32px; border-radius:8px; display:flex; align-items:center;
+               justify-content:center; flex-shrink:0; }
+
+/* Success */
+.success-banner { background:linear-gradient(135deg,#0f0c29,#1e3a5f); border-radius:20px;
+                  padding:2.5rem; text-align:center; color:#fff; }
+.success-icon { width:80px; height:80px; background:linear-gradient(135deg,#10b981,#059669);
+                border-radius:50%; display:flex; align-items:center; justify-content:center;
+                margin:0 auto 1.2rem; box-shadow:0 8px 25px rgba(16,185,129,.4); font-size:2rem; color:#fff; }
+.order-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-top:1.2rem; text-align:left; }
+.order-info-item { background:rgba(255,255,255,.08); border-radius:10px; padding:.7rem 1rem; }
+.order-info-item .lbl { font-size:.68rem; color:rgba(255,255,255,.5); text-transform:uppercase; }
+.order-info-item .val { font-weight:700; font-size:.88rem; }
+
+/* Address section */
+.addr-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:.8rem; margin-bottom:.8rem; }
+@media(max-width:640px) { .addr-grid { grid-template-columns:1fr; } }
+
+/* Empty cart */
+.empty-cart-state { text-align:center; padding:2.5rem 1rem; }
+.empty-cart-state i { font-size:3rem; color:#d1d5db; margin-bottom:1rem; display:block; }
+</style>
+
+<div class="co-page">
+<div class="container-lg">
+
+    <!-- Breadcrumb -->
+    <div class="co-breadcrumb">
+        <a href="index.php"><i class="fas fa-home"></i></a>
+        <i class="fas fa-chevron-right" style="font-size:.65rem;"></i>
+        <a href="equipment.php">Shop</a>
+        <i class="fas fa-chevron-right" style="font-size:.65rem;"></i>
+        <span>Thanh toán</span>
+    </div>
+
+    <!-- Steps -->
+    <div class="co-steps">
+        <div class="co-step">
+            <div class="co-step-dot done"><i class="fas fa-check"></i></div>
+            <div class="co-step-label">Giỏ hàng</div>
+        </div>
+        <div class="co-step-line done"></div>
+        <div class="co-step">
+            <div class="co-step-dot <?php echo $order_success ? 'done' : 'active'; ?>">
+                <?php echo $order_success ? '<i class="fas fa-check"></i>' : '2'; ?>
+            </div>
+            <div class="co-step-label">Thanh toán</div>
+        </div>
+        <div class="co-step-line <?php echo $order_success ? 'done' : ''; ?>"></div>
+        <div class="co-step">
+            <div class="co-step-dot <?php echo $order_success ? 'done' : 'idle'; ?>">
+                <?php echo $order_success ? '<i class="fas fa-check"></i>' : '3'; ?>
+            </div>
+            <div class="co-step-label <?php echo $order_success ? '' : 'text-muted'; ?>">Xác nhận</div>
+        </div>
+    </div>
+
+    <?php if ($order_success): ?>
+    <!-- ===== SUCCESS STATE ===== -->
+    <div class="success-banner mb-4">
+        <div class="success-icon"><i class="fas fa-check"></i></div>
+        <h3 class="fw-bold mb-1">Đặt hàng thành công!</h3>
+        <p style="color:rgba(255,255,255,.65);margin:.3rem 0 1rem;">Cảm ơn bạn đã tin tưởng BadmintonPro Shop</p>
+        <div class="order-info-grid">
+            <div class="order-info-item">
+                <div class="lbl">Mã đơn hàng</div>
+                <div class="val" style="font-family:monospace;color:#67e8f9;font-size:1rem;letter-spacing:1px;">
+                    #<?php echo escape($order_number); ?>
+                </div>
+            </div>
+            <div class="order-info-item">
+                <div class="lbl">Trạng thái</div>
+                <div class="val" style="color:#4ade80;">Đang xử lý</div>
+            </div>
+            <div class="order-info-item">
+                <div class="lbl">Thanh toán</div>
+                <div class="val">
+                    <?php
+                    $pm_labels = ['cod'=>'Tiền mặt (COD)','bank'=>'Chuyển khoản','momo'=>'Ví MoMo','vnpay'=>'VNPay'];
+                    echo $pm_labels[$_POST['payment_method'] ?? 'cod'] ?? 'COD';
+                    ?>
+                </div>
+            </div>
+            <div class="order-info-item">
+                <div class="lbl">Giao hàng dự kiến</div>
+                <div class="val">2–3 ngày làm việc</div>
+            </div>
+        </div>
+    </div>
+
+    <?php if (($_POST['payment_method'] ?? 'cod') === 'bank'): ?>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:16px;padding:1.2rem 1.5rem;margin-bottom:1.5rem;">
+        <div class="fw-bold mb-2" style="color:#92400e;"><i class="fas fa-university me-2"></i>Hoàn tất chuyển khoản để xác nhận đơn</div>
+        <table style="font-size:.88rem;width:100%;">
+            <tr><td style="color:#6b7280;width:150px;">Ngân hàng:</td><td><strong>Vietcombank</strong></td></tr>
+            <tr><td style="color:#6b7280;">Số tài khoản:</td><td><strong style="font-family:monospace;">1234567890</strong></td></tr>
+            <tr><td style="color:#6b7280;">Chủ TK:</td><td><strong>BADMINTON PRO</strong></td></tr>
+            <tr><td style="color:#6b7280;">Nội dung CK:</td>
+                <td><strong style="color:#6366f1;"><?php echo escape($order_number); ?></strong></td></tr>
+        </table>
+    </div>
+    <?php endif; ?>
+
+    <div class="d-flex gap-2 justify-content-center">
+        <a href="order-history.php" class="btn fw-bold px-4 py-2"
+           style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:12px;">
+            <i class="fas fa-history me-2"></i>Xem đơn hàng
+        </a>
+        <a href="equipment.php" class="btn fw-bold px-4 py-2"
+           style="background:#f3f4f6;color:#374151;border:none;border-radius:12px;">
+            <i class="fas fa-shopping-bag me-2"></i>Tiếp tục mua sắm
+        </a>
+    </div>
+
+    <?php else: ?>
+    <!-- ===== CHECKOUT FORM ===== -->
+    <?php if ($error_message): ?>
+    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:12px;padding:.9rem 1.2rem;margin-bottom:1.5rem;font-size:.88rem;color:#dc2626;display:flex;align-items:center;gap:.6rem;">
+        <i class="fas fa-exclamation-circle"></i> <?php echo escape($error_message); ?>
+    </div>
+    <?php endif; ?>
+
+    <form method="POST" id="checkoutForm">
+        <input type="hidden" name="place_order" value="1">
+        <input type="hidden" name="cart_data" id="cartDataInput">
+        <input type="hidden" name="payment_method" id="paymentMethodInput" value="cod">
+
+        <div class="row g-4">
+            <!-- ── Cột trái ── -->
+            <div class="col-lg-7">
+
+                <!-- Thông tin người nhận -->
+                <div class="co-card">
+                    <div class="co-card-header">
+                        <i class="fas fa-user"></i> Thông tin người nhận
+                    </div>
+                    <div class="co-card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="co-label">Họ và tên <span>*</span></label>
+                                <input type="text" name="customer_name" class="co-input"
+                                       value="<?php echo escape($_SESSION['name'] ?? ''); ?>"
+                                       placeholder="Nguyễn Văn A" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="co-label">Số điện thoại <span>*</span></label>
+                                <input type="tel" name="customer_phone" class="co-input"
+                                       placeholder="0912 345 678" required
+                                       pattern="[0-9]{9,11}">
+                            </div>
+                            <div class="col-12">
+                                <label class="co-label">Email</label>
+                                <input type="email" class="co-input" disabled
+                                       value="<?php echo escape($_SESSION['email'] ?? ''); ?>"
+                                       style="background:#f3f4f6;color:#6b7280;">
+                            </div>
                         </div>
-                        <div class="card-body text-center">
-                            <div class="mb-4">
-                                <i class="fas fa-gift fa-3x text-success mb-3"></i>
-                                <h5>Cảm ơn bạn đã đặt hàng!</h5>
-                                <p class="text-muted">Mã đơn hàng của bạn là: <strong class="text-primary"><?php echo $order_number ?? ''; ?></strong></p>
+                    </div>
+                </div>
+
+                <!-- Địa chỉ giao hàng -->
+                <div class="co-card">
+                    <div class="co-card-header">
+                        <i class="fas fa-map-marker-alt"></i> Địa chỉ giao hàng
+                    </div>
+                    <div class="co-card-body">
+                        <div class="addr-grid">
+                            <div>
+                                <label class="co-label">Tỉnh / Thành phố <span>*</span></label>
+                                <select name="province" id="selectProvince" class="co-select" required onchange="loadDistricts(this.value)">
+                                    <option value="">-- Chọn tỉnh/TP --</option>
+                                </select>
                             </div>
-                            
-                            <div class="alert alert-info">
-                                <h6><i class="fas fa-info-circle me-2"></i>Thông tin đơn hàng:</h6>
-                                <ul class="list-unstyled mb-0">
-                                    <li><strong>Trạng thái:</strong> Đang xử lý</li>
-                                    <li><strong>Thanh toán:</strong> Thanh toán khi nhận hàng (COD)</li>
-                                    <li><strong>Giao hàng:</strong> 2-3 ngày làm việc</li>
-                                </ul>
+                            <div>
+                                <label class="co-label">Quận / Huyện <span>*</span></label>
+                                <select name="district" id="selectDistrict" class="co-select" required onchange="loadWards(this.value)">
+                                    <option value="">-- Chọn quận/huyện --</option>
+                                </select>
                             </div>
-                            
-                            <div class="d-flex gap-2 justify-content-center">
-                                <a href="order-history.php" class="btn btn-primary">
-                                    <i class="fas fa-history me-2"></i>Xem đơn hàng
-                                </a>
-                                <a href="equipment.php" class="btn btn-outline-primary">
-                                    <i class="fas fa-shopping-bag me-2"></i>Tiếp tục mua sắm
-                                </a>
+                            <div>
+                                <label class="co-label">Phường / Xã</label>
+                                <select name="ward" id="selectWard" class="co-select">
+                                    <option value="">-- Chọn phường/xã --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="co-label">Số nhà, tên đường <span>*</span></label>
+                            <input type="text" name="address_detail" class="co-input"
+                                   placeholder="VD: 123 Trần Phú" required>
+                        </div>
+                        <div class="mt-3">
+                            <label class="co-label">Ghi chú đơn hàng</label>
+                            <textarea name="order_note" class="co-textarea" rows="2"
+                                      placeholder="Giao giờ hành chính, để ở bảo vệ,..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phương thức thanh toán -->
+                <div class="co-card">
+                    <div class="co-card-header">
+                        <i class="fas fa-credit-card"></i> Phương thức thanh toán
+                    </div>
+                    <div class="co-card-body">
+
+                        <!-- COD -->
+                        <div class="pm-card active" onclick="selectPM('cod', this)">
+                            <div class="pm-icon-wrap" style="background:#d1fae5;">
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="13" rx="3" fill="#16a34a" opacity=".15"/><rect x="2" y="6" width="20" height="13" rx="3" stroke="#16a34a" stroke-width="1.8"/><path d="M6 13h4M6 16h3" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="13" r="2.5" fill="#16a34a"/></svg>
+                            </div>
+                            <div class="pm-text">
+                                <div class="pm-title">Tiền mặt tại sân</div>
+                                <div class="pm-sub">Thanh toán khi đến sân lần đầu</div>
+                            </div>
+                            <div class="pm-check-wrap">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </div>
+                        </div>
+
+                        <!-- MoMo -->
+                        <div class="pm-card" onclick="selectPM('momo', this)">
+                            <div class="pm-icon-wrap" style="background:#fce7f3;">
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="3" fill="#db2777" opacity=".12"/><rect x="3" y="5" width="18" height="14" rx="3" stroke="#db2777" stroke-width="1.8"/><circle cx="8" cy="11" r="2" fill="#db2777"/><circle cx="12" cy="11" r="2" fill="#db2777"/><circle cx="16" cy="11" r="2" fill="#db2777"/></svg>
+                            </div>
+                            <div class="pm-text">
+                                <div class="pm-title">Ví MoMo</div>
+                                <div class="pm-sub">Thanh toán qua ví điện tử MoMo</div>
+                            </div>
+                            <div class="pm-check-wrap">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </div>
+                        </div>
+
+                        <!-- VNPay -->
+                        <div class="pm-card" onclick="selectPM('vnpay', this)">
+                            <div class="pm-icon-wrap" style="background:#dbeafe;">
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V10M19 21V10" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round"/><path d="M2 10l10-7 10 7" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="9" y="14" width="6" height="7" rx="1" fill="#2563eb" opacity=".15" stroke="#2563eb" stroke-width="1.5"/></svg>
+                            </div>
+                            <div class="pm-text">
+                                <div class="pm-title">VNPay</div>
+                                <div class="pm-sub">Thẻ ATM, Visa, MasterCard, QR Pay</div>
+                            </div>
+                            <div class="pm-check-wrap">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </div>
+                        </div>
+
+                        <!-- Chuyển khoản -->
+                        <div class="pm-card" onclick="selectPM('bank', this)">
+                            <div class="pm-icon-wrap" style="background:#fef3c7;">
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 3L2 9h20L12 3z" fill="#d97706" opacity=".18" stroke="#d97706" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 9v9M9 9v9M15 9v9M19 9v9M3 18h18" stroke="#d97706" stroke-width="1.8" stroke-linecap="round"/></svg>
+                            </div>
+                            <div class="pm-text">
+                                <div class="pm-title">Chuyển khoản ngân hàng</div>
+                                <div class="pm-sub">Xác nhận trong 1–2 giờ làm việc</div>
+                            </div>
+                            <div class="pm-check-wrap">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </div>
+                        </div>
+
+                        <!-- Bank info panel -->
+                        <div id="bankDetail">
+                            <div style="font-weight:700;font-size:.82rem;color:#92400e;margin-bottom:.7rem;display:flex;align-items:center;gap:.4rem;">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#d97706" stroke-width="1.3"/><path d="M7 4v4M7 9.5v.5" stroke="#d97706" stroke-width="1.4" stroke-linecap="round"/></svg>
+                                Thông tin chuyển khoản
+                            </div>
+                            <div style="display:grid;gap:.45rem;font-size:.85rem;">
+                                <div style="display:flex;gap:.5rem;align-items:center;">
+                                    <span style="color:#78716c;min-width:115px;">Ngân hàng</span>
+                                    <span style="font-weight:700;">Vietcombank</span>
+                                </div>
+                                <div style="display:flex;gap:.5rem;align-items:center;">
+                                    <span style="color:#78716c;min-width:115px;">Số tài khoản</span>
+                                    <span class="bank-ref">1234567890</span>
+                                </div>
+                                <div style="display:flex;gap:.5rem;align-items:center;">
+                                    <span style="color:#78716c;min-width:115px;">Chủ tài khoản</span>
+                                    <span style="font-weight:700;">BADMINTON PRO</span>
+                                </div>
+                                <div style="display:flex;gap:.5rem;align-items:center;">
+                                    <span style="color:#78716c;min-width:115px;">Nội dung CK</span>
+                                    <span id="bankRef" class="bank-ref" style="color:#6366f1;">Mã đơn hàng</span>
+                                </div>
+                            </div>
+                            <div style="margin-top:.7rem;background:#fef9c3;border-radius:8px;padding:.5rem .8rem;font-size:.78rem;color:#854d0e;display:flex;align-items:center;gap:.4rem;">
+                                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1L1 11.5h11L6.5 1z" stroke="#d97706" stroke-width="1.2" stroke-linejoin="round"/><path d="M6.5 5v3M6.5 9.2v.3" stroke="#d97706" stroke-width="1.2" stroke-linecap="round"/></svg>
+                                Ghi đúng nội dung để được xác nhận tự động
+                            </div>
+                        </div>
+
+                        <!-- SSL -->
+                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:.75rem 1rem;font-size:.8rem;color:#166534;display:flex;align-items:center;gap:.6rem;">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L2 4v4c0 3.3 2.7 5.5 6 6 3.3-.5 6-2.7 6-6V4L8 1.5z" fill="#16a34a" opacity=".15" stroke="#16a34a" stroke-width="1.3" stroke-linejoin="round"/><path d="M5 8l2 2 4-4" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            Giao dịch được bảo mật SSL 256-bit
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Cột phải ── -->
+            <div class="col-lg-5">
+                <div style="position:sticky;top:80px;">
+                    <!-- Order Summary -->
+                    <div class="co-card">
+                        <div class="co-card-header">
+                            <i class="fas fa-receipt"></i> Đơn hàng của bạn
+                            <span id="cartItemCount" style="margin-left:auto;background:#f3f4f6;color:#6b7280;border-radius:8px;padding:2px 8px;font-size:.75rem;font-weight:700;">0 sản phẩm</span>
+                        </div>
+                        <div class="co-card-body">
+                            <div id="orderItemList">
+                                <div class="empty-cart-state">
+                                    <i class="fas fa-shopping-cart"></i>
+                                    <p style="color:#9ca3af;font-size:.9rem;">Giỏ hàng trống</p>
+                                    <a href="equipment.php" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:10px;padding:.5rem 1.2rem;font-weight:700;font-size:.85rem;text-decoration:none;display:inline-block;">
+                                        Mua sắm ngay
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div id="orderTotals" style="display:none;margin-top:.8rem;">
+                                <div class="os-total-row">
+                                    <span style="color:#6b7280;">Tạm tính</span>
+                                    <span class="val" id="osSubtotal">0đ</span>
+                                </div>
+                                <div class="os-total-row">
+                                    <span style="color:#6b7280;">Phí vận chuyển</span>
+                                    <span class="val" id="osShipping">Miễn phí</span>
+                                </div>
+                                <div class="os-total-row final">
+                                    <span>Tổng cộng</span>
+                                    <span class="val" id="osTotal">0đ</span>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-place-order mt-3" id="placeOrderBtn" disabled>
+                                <i class="fas fa-lock me-2"></i>Đặt hàng ngay
+                            </button>
+
+                            <p style="text-align:center;font-size:.75rem;color:#9ca3af;margin-top:.6rem;">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                Thông tin cá nhân được bảo mật tuyệt đối
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Policy -->
+                    <div class="co-card">
+                        <div class="co-card-body" style="padding:1rem 1.2rem;">
+                            <div class="policy-item">
+                                <div class="pm-icon" style="background:#d1fae5;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                                    <i class="fas fa-truck" style="color:#16a34a;font-size:.8rem;"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold" style="font-size:.82rem;">Miễn phí vận chuyển</div>
+                                    <div style="font-size:.75rem;color:#9ca3af;">Cho đơn hàng từ 500.000đ</div>
+                                </div>
+                            </div>
+                            <div class="policy-item">
+                                <div class="pm-icon" style="background:#dbeafe;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                                    <i class="fas fa-undo" style="color:#2563eb;font-size:.8rem;"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold" style="font-size:.82rem;">Đổi trả 7 ngày</div>
+                                    <div style="font-size:.75rem;color:#9ca3af;">Không cần lý do, miễn phí đổi</div>
+                                </div>
+                            </div>
+                            <div class="policy-item">
+                                <div class="pm-icon" style="background:#fef3c7;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                                    <i class="fas fa-certificate" style="color:#d97706;font-size:.8rem;"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold" style="font-size:.82rem;">Chính hãng 100%</div>
+                                    <div style="font-size:.75rem;color:#9ca3af;">Bảo hành chính hãng toàn quốc</div>
+                                </div>
+                            </div>
+                            <div class="policy-item">
+                                <div class="pm-icon" style="background:#ede9fe;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                                    <i class="fas fa-headset" style="color:#7c3aed;font-size:.8rem;"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold" style="font-size:.82rem;">Hỗ trợ 24/7</div>
+                                    <div style="font-size:.75rem;color:#9ca3af;">Hotline: 0968.073.500</div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        <?php else: ?>
-            <!-- Checkout Form -->
-            <?php if ($error_message): ?>
-                <div class="alert alert-danger alert-dismissible fade show">
-                    <i class="fas fa-exclamation-triangle me-2"></i><?php echo htmlspecialchars($error_message); ?>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            <?php endif; ?>
-            
-            <form method="post" id="checkoutForm">
-                <div class="row g-4">
-                    <!-- Thông tin giao hàng -->
-                    <div class="col-lg-7">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-truck me-2"></i>Thông tin giao hàng
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Họ tên *</label>
-                                        <input type="text" name="shipping_name" class="form-control" 
-                                               value="<?php echo htmlspecialchars($_SESSION['name'] ?? ''); ?>" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Số điện thoại *</label>
-                                        <input type="tel" name="shipping_phone" class="form-control" required>
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="form-label">Địa chỉ giao hàng *</label>
-                                        <textarea name="shipping_address" class="form-control" rows="3" 
-                                                  placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố" required></textarea>
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="form-label">Ghi chú đơn hàng</label>
-                                        <textarea name="order_note" class="form-control" rows="2" 
-                                                  placeholder="Ghi chú về đơn hàng, ví dụ: thời gian hay chỉ dẫn địa điểm giao hàng chi tiết hơn."></textarea>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Phương thức thanh toán -->
-                        <div class="card mt-4">
-                            <div class="card-header">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-credit-card me-2"></i>Phương thức thanh toán
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="payment_method" id="cod" value="cod" checked>
-                                    <label class="form-check-label" for="cod">
-                                        <i class="fas fa-money-bill-wave text-success me-2"></i>
-                                        <strong>Thanh toán khi nhận hàng (COD)</strong>
-                                        <small class="d-block text-muted">Thanh toán bằng tiền mặt khi nhận hàng</small>
-                                    </label>
-                                </div>
-                                <div class="form-check mt-3">
-                                    <input class="form-check-input" type="radio" name="payment_method" id="bank" value="bank" disabled>
-                                    <label class="form-check-label text-muted" for="bank">
-                                        <i class="fas fa-university text-muted me-2"></i>
-                                        <strong>Chuyển khoản ngân hàng</strong>
-                                        <small class="d-block text-muted">Sắp có (Coming soon)</small>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Tóm tắt đơn hàng -->
-                    <div class="col-lg-5">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-receipt me-2"></i>Tóm tắt đơn hàng
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <div id="orderSummary">
-                                    <div class="text-center py-4">
-                                        <i class="fas fa-shopping-cart fa-2x text-muted mb-2"></i>
-                                        <p class="text-muted">Giỏ hàng trống</p>
-                                        <a href="equipment.php" class="btn btn-primary btn-sm">
-                                            <i class="fas fa-shopping-bag me-2"></i>Mua sắm ngay
-                                        </a>
-                                    </div>
-                                </div>
-                                
-                                <div id="orderTotal" style="display: none;">
-                                    <hr>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span>Tạm tính:</span>
-                                        <span id="subtotal">0đ</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span>Phí vận chuyển:</span>
-                                        <span class="text-success">Miễn phí</span>
-                                    </div>
-                                    <hr>
-                                    <div class="d-flex justify-content-between mb-3">
-                                        <strong>Tổng cộng:</strong>
-                                        <strong class="text-danger" id="totalAmount">0đ</strong>
-                                    </div>
-                                    
-                                    <input type="hidden" name="cart_data" id="cartDataInput">
-                                    
-                                    <button type="submit" name="place_order" class="btn btn-danger w-100 btn-lg" id="placeOrderBtn" disabled>
-                                        <i class="fas fa-check me-2"></i>Đặt hàng
-                                    </button>
-                                    
-                                    <div class="text-center mt-3">
-                                        <small class="text-muted">
-                                            <i class="fas fa-shield-alt me-1"></i>
-                                            Thông tin của bạn được bảo mật
-                                        </small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Chính sách -->
-                        <div class="card mt-3">
-                            <div class="card-body">
-                                <h6><i class="fas fa-info-circle text-primary me-2"></i>Chính sách mua hàng</h6>
-                                <ul class="list-unstyled small text-muted mb-0">
-                                    <li><i class="fas fa-check text-success me-2"></i>Miễn phí vận chuyển toàn quốc</li>
-                                    <li><i class="fas fa-check text-success me-2"></i>Đổi trả trong 7 ngày</li>
-                                    <li><i class="fas fa-check text-success me-2"></i>Bảo hành chính hãng</li>
-                                    <li><i class="fas fa-check text-success me-2"></i>Hỗ trợ 24/7</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        <?php endif; ?>
-    </div>
-</section>
+        </div>
+    </form>
+    <?php endif; ?>
 
-<?php require_once __DIR__ . '/includes/footer.php'; ?>
+</div>
+</div>
 
 <script>
+// ═══════════════════════════════════════════
+// CART LOADING
+// ═══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
-    // Load cart data from localStorage
-    loadCartData();
-    
-    function loadCartData() {
-        const cartData = JSON.parse(localStorage.getItem('cart') || '[]');
-        const orderSummary = document.getElementById('orderSummary');
-        const orderTotal = document.getElementById('orderTotal');
-        const cartDataInput = document.getElementById('cartDataInput');
-        const placeOrderBtn = document.getElementById('placeOrderBtn');
-        
-        if (cartData.length === 0) {
-            orderSummary.style.display = 'block';
-            orderTotal.style.display = 'none';
-            placeOrderBtn.disabled = true;
-            return;
-        }
-        
-        // Hide empty cart message
-        orderSummary.style.display = 'none';
-        orderTotal.style.display = 'block';
-        placeOrderBtn.disabled = false;
-        
-        // Generate order summary HTML
-        let summaryHTML = '';
-        let subtotal = 0;
-        
-        cartData.forEach(item => {
-            const itemTotal = item.price * item.quantity;
-            subtotal += itemTotal;
-            
-            summaryHTML += `
-                <div class="d-flex align-items-center mb-3 pb-3 border-bottom">
-                    <img src="${item.image}" alt="${item.name}" class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1 small">${item.name}</h6>
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted small">SL: ${item.quantity}</span>
-                            <span class="fw-bold small">${itemTotal.toLocaleString()}đ</span>
-                        </div>
-                    </div>
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const listEl   = document.getElementById('orderItemList');
+    const totalsEl = document.getElementById('orderTotals');
+    const countEl  = document.getElementById('cartItemCount');
+    const submitBtn= document.getElementById('placeOrderBtn');
+    const cartInput= document.getElementById('cartDataInput');
+
+    if (!cart.length) return;
+
+    let subtotal = 0;
+    let html = '';
+
+    cart.forEach(item => {
+        const lineTotal = item.price * item.quantity;
+        subtotal += lineTotal;
+        html += `
+            <div class="os-item">
+                <img src="${item.image || 'https://via.placeholder.com/48?text=P'}" alt="${item.name}">
+                <div style="flex:1;min-width:0;">
+                    <div class="os-item-name">${item.name}</div>
+                    <div class="os-item-meta">${item.price.toLocaleString('vi-VN')}đ × ${item.quantity}</div>
                 </div>
-            `;
-        });
-        
-        orderSummary.innerHTML = summaryHTML;
-        
-        // Update totals
-        document.getElementById('subtotal').textContent = subtotal.toLocaleString() + 'đ';
-        document.getElementById('totalAmount').textContent = subtotal.toLocaleString() + 'đ';
-        
-        // Set cart data for form submission
-        cartDataInput.value = JSON.stringify(cartData);
-    }
-    
-    // Form validation
-    const checkoutForm = document.getElementById('checkoutForm');
-    if (checkoutForm) {
-        checkoutForm.addEventListener('submit', function(e) {
-            const cartData = JSON.parse(localStorage.getItem('cart') || '[]');
-            if (cartData.length === 0) {
-                e.preventDefault();
-                alert('Giỏ hàng trống. Vui lòng thêm sản phẩm trước khi đặt hàng.');
-                return;
-            }
-            
-            // Add loading state
-            const submitBtn = this.querySelector('button[type="submit"]');
-            submitBtn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Đang xử lý...';
-            submitBtn.disabled = true;
-        });
-    }
-    
-    // Clear cart after successful order
-    <?php if ($order_success): ?>
-        localStorage.removeItem('cart');
-        // Update cart count in header if exists
-        const cartCount = document.getElementById('cartCount');
-        if (cartCount) {
-            cartCount.textContent = '0';
-        }
-    <?php endif; ?>
+                <div style="font-weight:800;font-size:.88rem;color:#374151;white-space:nowrap;">
+                    ${lineTotal.toLocaleString('vi-VN')}đ
+                </div>
+            </div>`;
+    });
+
+    listEl.innerHTML = html;
+    totalsEl.style.display = 'block';
+
+    const totalItems = cart.reduce((s,i) => s + i.quantity, 0);
+    countEl.textContent = totalItems + ' sản phẩm';
+
+    const shipping = subtotal >= 500000 ? 0 : 30000;
+    const total = subtotal + shipping;
+
+    document.getElementById('osSubtotal').textContent = subtotal.toLocaleString('vi-VN') + 'đ';
+    document.getElementById('osShipping').textContent = shipping === 0
+        ? '<span class="free">Miễn phí</span>'
+        : shipping.toLocaleString('vi-VN') + 'đ';
+    document.getElementById('osShipping').innerHTML = shipping === 0
+        ? '<span class="free">Miễn phí</span>'
+        : shipping.toLocaleString('vi-VN') + 'đ';
+    document.getElementById('osTotal').textContent = total.toLocaleString('vi-VN') + 'đ';
+
+    cartInput.value = JSON.stringify(cart);
+    if (submitBtn) submitBtn.disabled = false;
 });
+
+// Clear cart on success
+<?php if ($order_success): ?>
+localStorage.removeItem('cart');
+<?php endif; ?>
+
+// ═══════════════════════════════════════════
+// PAYMENT METHOD SELECTION
+// ═══════════════════════════════════════════
+function selectPM(method, el) {
+    document.querySelectorAll('.pm-card').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('paymentMethodInput').value = method;
+
+    // Bank detail panel
+    const bd = document.getElementById('bankDetail');
+    if (method === 'bank') {
+        bd.style.display = 'block';
+        // Generate a temp ref for display
+        const ref = 'ORDER-' + Date.now().toString(36).toUpperCase().slice(-6);
+        document.getElementById('bankRef').textContent = ref;
+    } else {
+        bd.style.display = 'none';
+    }
+}
+
+// ═══════════════════════════════════════════
+// ADDRESS — VIETNAM API
+// ═══════════════════════════════════════════
+async function loadProvinces() {
+    try {
+        const res = await fetch('https://provinces.open-api.vn/api/?depth=1');
+        const data = await res.json();
+        const sel = document.getElementById('selectProvince');
+        data.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.name;
+            opt.dataset.code = p.code;
+            opt.textContent = p.name;
+            sel.appendChild(opt);
+        });
+    } catch(e) {
+        // Fallback static list
+        const provinces = ['Hà Nội','TP. Hồ Chí Minh','Đà Nẵng','Hải Phòng','Cần Thơ','An Giang','Bắc Giang','Bắc Kạn','Bạc Liêu','Bắc Ninh','Bến Tre','Bình Định','Bình Dương','Bình Phước','Bình Thuận','Cà Mau','Cao Bằng','Đắk Lắk','Đắk Nông','Điện Biên','Đồng Nai','Đồng Tháp','Gia Lai','Hà Giang','Hà Nam','Hà Tĩnh','Hải Dương','Hậu Giang','Hòa Bình','Hưng Yên','Khánh Hòa','Kiên Giang','Kon Tum','Lai Châu','Lâm Đồng','Lạng Sơn','Lào Cai','Long An','Nam Định','Nghệ An','Ninh Bình','Ninh Thuận','Phú Thọ','Phú Yên','Quảng Bình','Quảng Nam','Quảng Ngãi','Quảng Ninh','Quảng Trị','Sóc Trăng','Sơn La','Tây Ninh','Thái Bình','Thái Nguyên','Thanh Hóa','Thừa Thiên Huế','Tiền Giang','Trà Vinh','Tuyên Quang','Vĩnh Long','Vĩnh Phúc','Yên Bái'];
+        const sel = document.getElementById('selectProvince');
+        provinces.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p; opt.textContent = p;
+            sel.appendChild(opt);
+        });
+    }
+}
+
+async function loadDistricts(provinceName) {
+    const sel = document.getElementById('selectDistrict');
+    const wardSel = document.getElementById('selectWard');
+    sel.innerHTML = '<option value="">-- Chọn quận/huyện --</option>';
+    wardSel.innerHTML = '<option value="">-- Chọn phường/xã --</option>';
+    if (!provinceName) return;
+
+    try {
+        const provSel = document.getElementById('selectProvince');
+        const code = provSel.options[provSel.selectedIndex]?.dataset?.code;
+        if (!code) return;
+
+        const res = await fetch(`https://provinces.open-api.vn/api/p/${code}?depth=2`);
+        const data = await res.json();
+        (data.districts || []).forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.name; opt.dataset.code = d.code; opt.textContent = d.name;
+            sel.appendChild(opt);
+        });
+    } catch(e) {}
+}
+
+async function loadWards(districtName) {
+    const sel = document.getElementById('selectWard');
+    sel.innerHTML = '<option value="">-- Chọn phường/xã --</option>';
+    if (!districtName) return;
+
+    try {
+        const distSel = document.getElementById('selectDistrict');
+        const code = distSel.options[distSel.selectedIndex]?.dataset?.code;
+        if (!code) return;
+
+        const res = await fetch(`https://provinces.open-api.vn/api/d/${code}?depth=2`);
+        const data = await res.json();
+        (data.wards || []).forEach(w => {
+            const opt = document.createElement('option');
+            opt.value = w.name; opt.textContent = w.name;
+            sel.appendChild(opt);
+        });
+    } catch(e) {}
+}
+
+// Form submit validation
+document.getElementById('checkoutForm')?.addEventListener('submit', function(e) {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    if (!cart.length) {
+        e.preventDefault();
+        alert('Giỏ hàng trống!');
+        return;
+    }
+    const btn = document.getElementById('placeOrderBtn');
+    if (btn) {
+        btn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Đang xử lý...';
+        btn.disabled = true;
+    }
+});
+
+// Init
+loadProvinces();
 </script>
 
-<style>
-.card {
-    border-radius: 10px;
-    border: none;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-.card-header {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-radius: 10px 10px 0 0;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.form-control:focus {
-    border-color: #dc3545;
-    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
-}
-
-.btn-danger {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-    border: none;
-}
-
-.btn-danger:hover {
-    background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
-    transform: translateY(-1px);
-}
-
-.form-check-input:checked {
-    background-color: #dc3545;
-    border-color: #dc3545;
-}
-
-.alert {
-    border-radius: 8px;
-}
-
-@media (max-width: 768px) {
-    .card-body {
-        padding: 1rem;
-    }
-    
-    .btn-lg {
-        padding: 0.75rem 1rem;
-        font-size: 1rem;
-    }
-}
-</style>
+<?php require_once __DIR__ . '/includes/footer.php'; ?>

@@ -3,12 +3,31 @@ require_once __DIR__ . '/../db.php';
 
 function getCourts($filters = []) {
     global $mysqli;
-    $sql = 'SELECT * FROM courts WHERE status = 1';
+
+    // Tạo bảng booking_reviews nếu chưa có
+    $mysqli->query("CREATE TABLE IF NOT EXISTS booking_reviews (
+        id         INT AUTO_INCREMENT PRIMARY KEY,
+        booking_id INT DEFAULT NULL,
+        user_id    INT NOT NULL,
+        court_id   INT NOT NULL,
+        rating     TINYINT(1) NOT NULL,
+        review_text TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_court (court_id),
+        INDEX idx_user  (user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    $sql = 'SELECT c.*,
+                COALESCE(ROUND(AVG(r.rating), 1), 0) AS avg_rating,
+                COUNT(r.id) AS review_count
+            FROM courts c
+            LEFT JOIN booking_reviews r ON r.court_id = c.id
+            WHERE c.status = 1';
     $params = [];
     $types = '';
 
     if (!empty($filters['q'])) {
-        $sql .= ' AND (name LIKE ? OR description LIKE ? OR location LIKE ?)';
+        $sql .= ' AND (c.name LIKE ? OR c.description LIKE ? OR c.location LIKE ?)';
         $value = '%' . $filters['q'] . '%';
         $params[] = &$value;
         $params[] = &$value;
@@ -16,40 +35,43 @@ function getCourts($filters = []) {
         $types .= 'sss';
     }
     if (!empty($filters['location'])) {
-        $sql .= ' AND location LIKE ?';
+        $sql .= ' AND c.location LIKE ?';
         $value = '%' . $filters['location'] . '%';
         $params[] = &$value;
         $types .= 's';
     }
     if (!empty($filters['min_price']) && is_numeric($filters['min_price'])) {
-        $sql .= ' AND price_per_hour >= ?';
+        $sql .= ' AND c.price_per_hour >= ?';
         $params[] = &$filters['min_price'];
         $types .= 'i';
     }
     if (!empty($filters['max_price']) && is_numeric($filters['max_price'])) {
-        $sql .= ' AND price_per_hour <= ?';
+        $sql .= ' AND c.price_per_hour <= ?';
         $params[] = &$filters['max_price'];
         $types .= 'i';
     }
     if (empty($filters['min_price']) && empty($filters['max_price']) && !empty($filters['price'])) {
         if ($filters['price'] === 'low') {
-            $sql .= ' AND price_per_hour <= 100000';
+            $sql .= ' AND c.price_per_hour <= 100000';
         } elseif ($filters['price'] === 'mid') {
-            $sql .= ' AND price_per_hour BETWEEN 100001 AND 150000';
+            $sql .= ' AND c.price_per_hour BETWEEN 100001 AND 150000';
         } elseif ($filters['price'] === 'high') {
-            $sql .= ' AND price_per_hour > 150000';
+            $sql .= ' AND c.price_per_hour > 150000';
         }
     }
 
     $sort = $filters['sort'] ?? '';
+    $sql .= ' GROUP BY c.id';
     if ($sort === 'price_asc') {
-        $sql .= ' ORDER BY price_per_hour ASC';
+        $sql .= ' ORDER BY c.price_per_hour ASC';
     } elseif ($sort === 'price_desc') {
-        $sql .= ' ORDER BY price_per_hour DESC';
+        $sql .= ' ORDER BY c.price_per_hour DESC';
     } elseif ($sort === 'newest') {
-        $sql .= ' ORDER BY created_at DESC';
+        $sql .= ' ORDER BY c.created_at DESC';
+    } elseif ($sort === 'rating') {
+        $sql .= ' ORDER BY avg_rating DESC';
     } else {
-        $sql .= ' ORDER BY created_at DESC';
+        $sql .= ' ORDER BY c.created_at DESC';
     }
 
     $stmt = $mysqli->prepare($sql);
@@ -65,11 +87,18 @@ function getCourts($filters = []) {
 
 function getCourtById($id) {
     global $mysqli;
-    $stmt = $mysqli->prepare('SELECT * FROM courts WHERE id = ? AND status = 1');
+    $stmt = $mysqli->prepare(
+        'SELECT c.*,
+                COALESCE(ROUND(AVG(r.rating), 1), 0) AS avg_rating,
+                COUNT(r.id) AS review_count
+         FROM courts c
+         LEFT JOIN booking_reviews r ON r.court_id = c.id
+         WHERE c.id = ? AND c.status = 1
+         GROUP BY c.id'
+    );
     $stmt->bind_param('i', $id);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $court = $result->fetch_assoc();
+    $court = $stmt->get_result()->fetch_assoc();
     $stmt->close();
     return $court;
 }
@@ -300,4 +329,195 @@ function getShopStats() {
     
     return $stats;
 }
-?>
+
+/**
+ * Render 5 ngôi sao từ giá trị rating (0–5, hỗ trợ nửa sao)
+ */
+function renderStars($rating, $max = 5) {
+    $html  = '';
+    $full  = floor($rating);
+    $half  = ($rating - $full) >= 0.3 ? 1 : 0;
+    $empty = $max - $full - $half;
+    for ($i = 0; $i < $full;  $i++) $html .= '<i class="fas fa-star star-filled"></i>';
+    if ($half)                        $html .= '<i class="fas fa-star-half-alt star-half"></i>';
+    for ($i = 0; $i < $empty; $i++) $html .= '<i class="far fa-star star-empty"></i>';
+    return $html;
+}
+
+// ============================================================
+// MEMBERSHIP FUNCTIONS
+// ============================================================
+
+/**
+ * Lấy gói hội viên đang active của user (còn hạn + đã thanh toán hoặc tiền mặt)
+ */
+function getActiveMembership($user_id) {
+    global $mysqli;
+
+    // Auto-expire: cập nhật các gói đã hết hạn
+    $mysqli->query("UPDATE memberships SET status='expired' WHERE status='active' AND end_date < CURDATE()");
+
+    $stmt = $mysqli->prepare(
+        'SELECT * FROM memberships
+         WHERE user_id = ? AND status = "active"
+         ORDER BY end_date DESC LIMIT 1'
+    );
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    $m = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return $m;
+}
+
+/**
+ * Số vé còn lại của membership
+ */
+function getMembershipTicketsRemaining($membership) {
+    if (!$membership) return 0;
+    return max(0, (int)($membership['free_tickets'] ?? 0) - (int)($membership['tickets_used'] ?? 0));
+}
+
+/**
+ * Kiểm tra user có quyền hội viên hợp lệ không
+ * Trả về membership array hoặc null
+ */
+function checkMemberBenefit($user_id) {
+    if (!$user_id) return null;
+    return getActiveMembership($user_id);
+}
+
+/**
+ * Dùng 1 vé hội viên cho booking
+ * Trả về true nếu thành công
+ */
+function useMemberTicket($membership_id, $user_id, $booking_id = null, $note = '') {
+    global $mysqli;
+
+    // Kiểm tra còn vé không
+    $stmt = $mysqli->prepare(
+        'SELECT id, free_tickets, tickets_used FROM memberships
+         WHERE id = ? AND user_id = ? AND status = "active" AND end_date >= CURDATE()'
+    );
+    $stmt->bind_param('ii', $membership_id, $user_id);
+    $stmt->execute();
+    $m = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$m) return false;
+    if ($m['tickets_used'] ?? 0 >= $m['free_tickets'] ?? 0) return false;
+
+    // Trừ vé
+    $upd = $mysqli->prepare('UPDATE memberships SET tickets_used = tickets_used + 1 WHERE id = ?');
+    $upd->bind_param('i', $membership_id);
+    $upd->execute();
+    $upd->close();
+
+    // Ghi log
+    $log = $mysqli->prepare(
+        'INSERT INTO membership_ticket_logs (membership_id, user_id, booking_id, action, tickets_delta, note)
+         VALUES (?, ?, ?, "use", -1, ?)'
+    );
+    $log->bind_param('iiis', $membership_id, $user_id, $booking_id, $note);
+    $log->execute();
+    $log->close();
+
+    return true;
+}
+
+/**
+ * Hoàn vé (khi huỷ booking)
+ */
+function refundMemberTicket($membership_id, $user_id, $booking_id = null) {
+    global $mysqli;
+
+    $upd = $mysqli->prepare(
+        'UPDATE memberships SET tickets_used = GREATEST(0, tickets_used - 1) WHERE id = ? AND user_id = ?'
+    );
+    $upd->bind_param('ii', $membership_id, $user_id);
+    $upd->execute();
+    $upd->close();
+
+    $log = $mysqli->prepare(
+        'INSERT INTO membership_ticket_logs (membership_id, user_id, booking_id, action, tickets_delta, note)
+         VALUES (?, ?, ?, "refund", 1, "Hoàn vé do huỷ booking")'
+    );
+    $log->bind_param('iii', $membership_id, $user_id, $booking_id);
+    $log->execute();
+    $log->close();
+
+    return true;
+}
+
+/**
+ * Giá hội viên cố định = 80,000đ/giờ
+ */
+function getMemberPrice() {
+    return 80000;
+}
+
+/**
+ * Tính giá khi booking có dùng vé hội viên
+ * $hours: số giờ đặt
+ * Trả về ['price' => int, 'discount' => int, 'used_ticket' => bool]
+ */
+function calcMemberBookingPrice($court_price_per_hour, $hours, $membership) {
+    if (!$membership) {
+        return ['price' => $court_price_per_hour * $hours, 'discount' => 0, 'used_ticket' => false];
+    }
+
+    $remaining = getMembershipTicketsRemaining($membership);
+    $is_valid   = ($membership['status'] === 'active') && (strtotime($membership['end_date']) >= time());
+
+    if (!$is_valid || $remaining <= 0) {
+        return ['price' => $court_price_per_hour * $hours, 'discount' => 0, 'used_ticket' => false];
+    }
+
+    $member_price = getMemberPrice() * $hours;
+    $normal_price = $court_price_per_hour * $hours;
+    $discount     = max(0, $normal_price - $member_price);
+
+    return [
+        'price'       => $member_price,
+        'discount'    => $discount,
+        'used_ticket' => true,
+        'membership'  => $membership,
+    ];
+}
+
+/**
+ * Lấy lịch sử membership của user
+ */
+function getUserMemberships($user_id) {
+    global $mysqli;
+    $mysqli->query("UPDATE memberships SET status='expired' WHERE status='active' AND end_date < CURDATE() AND user_id = $user_id");
+
+    $stmt = $mysqli->prepare(
+        'SELECT * FROM memberships WHERE user_id = ? ORDER BY created_at DESC'
+    );
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    $list = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return $list;
+}
+
+/**
+ * Lấy lịch sử dùng vé
+ */
+function getMembershipTicketLogs($membership_id, $limit = 20) {
+    global $mysqli;
+    $stmt = $mysqli->prepare(
+        'SELECT l.*, b.booking_date, b.start_time, b.end_time,
+                c.name AS court_name
+         FROM membership_ticket_logs l
+         LEFT JOIN bookings b ON b.id = l.booking_id
+         LEFT JOIN courts c ON c.id = b.court_id
+         WHERE l.membership_id = ?
+         ORDER BY l.created_at DESC LIMIT ?'
+    );
+    $stmt->bind_param('ii', $membership_id, $limit);
+    $stmt->execute();
+    $logs = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return $logs;
+}
