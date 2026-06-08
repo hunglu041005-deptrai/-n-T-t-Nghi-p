@@ -1,176 +1,319 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
-
 require_once __DIR__ . '/includes/header.php';
 ?>
+<style>
+/* ===== TRAINING PAGE - VIP DESIGN ===== */
+.training-page { background: #f8fafc; }
 
-<!-- Training Page Header -->
-<section class="bg-warning text-dark py-4">
-    <div class="container">
+/* Hero */
+.training-hero {
+    background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+    padding: 5rem 0 7rem;
+    position: relative;
+    overflow: hidden;
+}
+.training-hero::before {
+    content: '';
+    position: absolute;
+    top: -100px; right: -100px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(255,193,7,.12) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.training-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: -80px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(255,87,34,.08) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.hero-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,193,7,.15); border: 1px solid rgba(255,193,7,.3);
+    color: #fbbf24; padding: 6px 16px; border-radius: 50px;
+    font-size: .82rem; font-weight: 700; margin-bottom: 1.5rem;
+}
+.hero-title {
+    font-size: 3rem; font-weight: 900; color: #fff;
+    line-height: 1.15; margin-bottom: 1rem;
+}
+.hero-title .accent {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.hero-desc { color: rgba(255,255,255,.6); font-size: 1.05rem; margin-bottom: 2rem; max-width: 520px; }
+.hero-stats { display: flex; gap: 2.5rem; flex-wrap: wrap; }
+.hero-stat .n { font-size: 2rem; font-weight: 900; color: #fbbf24; }
+.hero-stat .l { font-size: .75rem; color: rgba(255,255,255,.5); }
+
+/* Wave */
+.wave-sep { margin-top: -2px; line-height: 0; background: #302b63; }
+.wave-sep svg { display: block; width: 100%; }
+</style>
+<style>
+/* Course cards */
+.section-label { font-size: .75rem; font-weight: 700; color: #6366f1; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: .5rem; }
+.section-title-big { font-size: 1.9rem; font-weight: 900; color: #111827; margin-bottom: .5rem; }
+.section-sub { color: #6b7280; font-size: .95rem; }
+
+.course-card {
+    background: #fff; border-radius: 24px; overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,.06);
+    border: 2px solid transparent;
+    transition: all .35s cubic-bezier(.4,0,.2,1);
+    position: relative; height: 100%;
+}
+.course-card:hover {
+    border-color: #fbbf24;
+    box-shadow: 0 16px 48px rgba(251,191,36,.18);
+    transform: translateY(-6px);
+}
+.course-card.featured { border-color: #fbbf24; box-shadow: 0 8px 32px rgba(251,191,36,.2); }
+
+.course-img-wrap { position: relative; overflow: hidden; height: 220px; }
+.course-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
+.course-card:hover .course-img-wrap img { transform: scale(1.06); }
+
+.level-chip {
+    position: absolute; top: 14px; left: 14px;
+    padding: 5px 14px; border-radius: 50px;
+    font-size: .75rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+}
+.level-basic    { background: #d1fae5; color: #065f46; }
+.level-mid      { background: #fef3c7; color: #92400e; }
+.level-advanced { background: #fee2e2; color: #991b1b; }
+
+.hot-badge {
+    position: absolute; top: 14px; right: 14px;
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    color: #fff; font-size: .7rem; font-weight: 800; padding: 4px 10px; border-radius: 50px;
+}
+.course-body { padding: 1.8rem; }
+.course-name { font-size: 1.15rem; font-weight: 800; color: #111827; margin-bottom: 1rem; }
+
+.course-meta { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-bottom: 1.2rem; }
+.meta-item {
+    display: flex; align-items: center; gap: 8px;
+    background: #f9fafb; border-radius: 10px; padding: .55rem .8rem;
+    font-size: .82rem; color: #374151;
+}
+.meta-item i { width: 16px; text-align: center; }
+
+.course-features { margin-bottom: 1.4rem; }
+.course-features li {
+    display: flex; align-items: center; gap: 8px;
+    font-size: .85rem; color: #4b5563; padding: .4rem 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+.course-features li:last-child { border: none; }
+.course-features li i { color: #10b981; font-size: .9rem; }
+
+.price-row { display: flex; justify-content: space-between; align-items: center; }
+.course-price { font-size: 1.4rem; font-weight: 900; color: #111827; }
+.course-price small { font-size: .8rem; font-weight: 500; color: #9ca3af; }
+
+.btn-enroll {
+    padding: .65rem 1.6rem; border-radius: 12px; font-weight: 700; font-size: .9rem;
+    border: none; cursor: pointer; transition: all .2s; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-enroll-green { background: linear-gradient(135deg, #10b981, #059669); color: #fff; box-shadow: 0 4px 15px rgba(16,185,129,.3); }
+.btn-enroll-gold  { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; box-shadow: 0 4px 15px rgba(245,158,11,.3); }
+.btn-enroll-red   { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; box-shadow: 0 4px 15px rgba(239,68,68,.3); }
+.btn-enroll:hover { transform: translateY(-2px); filter: brightness(1.08); color: #fff; }
+</style>
+<style>
+/* Coach cards */
+.coaches-section { background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 5rem 0; }
+.coach-card {
+    background: #fff; border-radius: 24px; padding: 2.2rem 1.8rem;
+    text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,.06);
+    border: 2px solid transparent; transition: all .3s ease; height: 100%;
+}
+.coach-card:hover { border-color: #fbbf24; box-shadow: 0 12px 40px rgba(251,191,36,.15); transform: translateY(-4px); }
+.coach-avatar { position: relative; display: inline-block; margin-bottom: 1.2rem; }
+.coach-avatar img { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 4px solid #fef3c7; }
+.coach-ring {
+    position: absolute; inset: -6px; border-radius: 50%;
+    border: 3px dashed #fbbf24; animation: spin-slow 8s linear infinite; opacity: .5;
+}
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.coach-name { font-size: 1.1rem; font-weight: 800; color: #111827; margin-bottom: .3rem; }
+.coach-role { font-size: .82rem; color: #6b7280; margin-bottom: 1rem; }
+.coach-tag { display: inline-flex; align-items: center; gap: 5px; background: #f9fafb; border-radius: 8px; padding: 4px 10px; font-size: .78rem; font-weight: 600; color: #374151; margin: 3px; }
+
+/* Registration form */
+.reg-section { padding: 5rem 0; background: #fff; }
+.reg-card {
+    background: linear-gradient(135deg, #0f0c29, #302b63);
+    border-radius: 28px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+}
+.reg-header { padding: 2.5rem; border-bottom: 1px solid rgba(255,255,255,.1); }
+.reg-header h3 { color: #fff; font-weight: 900; font-size: 1.6rem; margin-bottom: .3rem; }
+.reg-header p { color: rgba(255,255,255,.5); font-size: .9rem; }
+.reg-body { padding: 2.5rem; }
+.form-label-white { color: rgba(255,255,255,.8); font-weight: 600; font-size: .85rem; margin-bottom: .4rem; }
+.form-control-dark, .form-select-dark {
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+    color: #fff; border-radius: 12px; padding: .75rem 1rem;
+    transition: all .2s;
+}
+.form-control-dark:focus, .form-select-dark:focus {
+    background: rgba(255,255,255,.12); border-color: #fbbf24;
+    box-shadow: 0 0 0 3px rgba(251,191,36,.15); color: #fff;
+}
+.form-control-dark::placeholder { color: rgba(255,255,255,.35); }
+.form-select-dark option { background: #302b63; color: #fff; }
+.btn-register-main {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #111;
+    border: none; border-radius: 14px; padding: 1rem 2rem;
+    font-weight: 900; font-size: 1rem; width: 100%; cursor: pointer;
+    box-shadow: 0 8px 25px rgba(251,191,36,.4); transition: all .2s;
+}
+.btn-register-main:hover { transform: translateY(-2px); box-shadow: 0 12px 35px rgba(251,191,36,.5); }
+
+/* Success modal */
+.modal-success-card { border-radius: 24px !important; overflow: hidden; border: none; }
+.modal-success-icon {
+    width: 90px; height: 90px; border-radius: 50%;
+    background: linear-gradient(135deg, #10b981, #059669);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.5rem; box-shadow: 0 8px 25px rgba(16,185,129,.3);
+}
+</style>
+
+<div class="training-page">
+
+<!-- ===== HERO ===== -->
+<div class="training-hero">
+    <div class="container position-relative" style="z-index:2;">
         <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="h3 mb-2">
-                    <i class="fas fa-graduation-cap me-2"></i>Đào tạo cầu lông
-                </h1>
-                <p class="mb-0 opacity-75">Từ cơ bản đến nâng cao - HLV chuyên nghiệp</p>
+            <div class="col-lg-7">
+                <div class="hero-tag"><i class="fas fa-graduation-cap"></i> Học viện cầu lông BadmintonPro</div>
+                <h1 class="hero-title">Nâng tầm kỹ năng<br>cùng <span class="accent">chuyên gia</span></h1>
+                <p class="hero-desc">Chương trình đào tạo chuyên nghiệp từ cơ bản đến nâng cao — HLV có chứng chỉ quốc tế BWF, lớp nhỏ 3-6 học viên.</p>
+                <div class="hero-stats">
+                    <div class="hero-stat"><span class="n">500+</span><span class="l">Học viên</span></div>
+                    <div class="hero-stat"><span class="n">3</span><span class="l">Khóa học</span></div>
+                    <div class="hero-stat"><span class="n">BWF</span><span class="l">Chứng chỉ</span></div>
+                    <div class="hero-stat"><span class="n">15+</span><span class="l">Năm kinh nghiệm</span></div>
+                </div>
             </div>
-            <div class="col-md-4 text-md-end">
-                <a href="discover.php" class="btn btn-dark">
-                    <i class="fas fa-arrow-left me-2"></i>Quay lại
-                </a>
+            <div class="col-lg-5 d-none d-lg-flex justify-content-end">
+                <div style="width:300px;height:300px;background:rgba(251,191,36,.08);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid rgba(251,191,36,.15);">
+                    <div style="width:200px;height:200px;background:rgba(251,191,36,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-graduation-cap" style="font-size:5rem;color:rgba(251,191,36,.5);"></i>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</section>
+</div>
+<div class="wave-sep"><svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg"><path d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" fill="#f8fafc"/></svg></div>
 
-<!-- Training Programs -->
-<section class="training-programs py-5">
+<!-- ===== COURSES ===== -->
+<section style="padding:5rem 0;background:#f8fafc;">
     <div class="container">
-        <div class="row mb-5">
-            <div class="col-12 text-center">
-                <h2 class="fw-bold mb-3">Chương trình đào tạo</h2>
-                <p class="text-muted">Lựa chọn khóa học phù hợp với trình độ của bạn</p>
-            </div>
+        <div class="text-center mb-5">
+            <div class="section-label">Chương trình đào tạo</div>
+            <h2 class="section-title-big">Chọn khóa học phù hợp</h2>
+            <p class="section-sub">Lộ trình rõ ràng, phù hợp mọi trình độ</p>
         </div>
-        
+
         <div class="row g-4">
-            <!-- Beginner Course -->
+            <!-- Cơ bản -->
             <div class="col-lg-4">
-                <div class="training-card h-100 bg-white rounded-4 shadow-sm border">
-                    <div class="training-image">
-                        <img src="https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
-                             class="card-img-top rounded-top" alt="Khóa cơ bản">
-                        <div class="training-level">
-                            <span class="badge bg-success">Cơ bản</span>
-                        </div>
+                <div class="course-card">
+                    <div class="course-img-wrap">
+                        <img src="https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Cơ bản">
+                        <span class="level-chip level-basic">Cơ bản</span>
                     </div>
-                    <div class="card-body p-4">
-                        <h5 class="fw-bold mb-3">Khóa cầu lông cơ bản</h5>
-                        <div class="training-info mb-3">
-                            <div class="info-item mb-2">
-                                <i class="fas fa-clock text-warning me-2"></i>
-                                <span>12 buổi (3 tháng)</span>
-                            </div>
-                            <div class="info-item mb-2">
-                                <i class="fas fa-users text-info me-2"></i>
-                                <span>4-6 học viên/lớp</span>
-                            </div>
-                            <div class="info-item mb-2">
-                                <i class="fas fa-calendar text-primary me-2"></i>
-                                <span>2 buổi/tuần</span>
-                            </div>
-                            <div class="info-item">
-                                <i class="fas fa-money-bill text-success me-2"></i>
-                                <span class="fw-bold">1,800,000đ</span>
-                            </div>
+                    <div class="course-body">
+                        <div class="course-name">Khóa cầu lông cơ bản</div>
+                        <div class="course-meta">
+                            <div class="meta-item"><i class="fas fa-clock text-amber-500" style="color:#f59e0b;"></i> 12 buổi</div>
+                            <div class="meta-item"><i class="fas fa-users" style="color:#3b82f6;"></i> 4-6 học viên</div>
+                            <div class="meta-item"><i class="fas fa-calendar" style="color:#8b5cf6;"></i> 2 buổi/tuần</div>
+                            <div class="meta-item"><i class="fas fa-hourglass" style="color:#10b981;"></i> 3 tháng</div>
                         </div>
-                        <div class="training-content mb-3">
-                            <h6 class="fw-bold">Nội dung khóa học:</h6>
-                            <ul class="list-unstyled small">
-                                <li><i class="fas fa-check text-success me-2"></i>Kỹ thuật cầm vợt cơ bản</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Tư thế di chuyển</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Kỹ thuật đánh cầu</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Luật thi đấu cơ bản</li>
-                            </ul>
+                        <ul class="list-unstyled course-features">
+                            <li><i class="fas fa-check-circle"></i> Kỹ thuật cầm vợt cơ bản</li>
+                            <li><i class="fas fa-check-circle"></i> Tư thế & di chuyển</li>
+                            <li><i class="fas fa-check-circle"></i> Kỹ thuật đánh cầu</li>
+                            <li><i class="fas fa-check-circle"></i> Luật thi đấu cơ bản</li>
+                        </ul>
+                        <div class="price-row">
+                            <div class="course-price">1.800.000đ <small>/khóa</small></div>
+                            <button class="btn-enroll btn-enroll-green" onclick="openRegModal('beginner')">
+                                <i class="fas fa-user-plus"></i> Đăng ký
+                            </button>
                         </div>
-                        <button class="btn btn-success w-100" data-course="beginner">
-                            <i class="fas fa-user-plus me-2"></i>Đăng ký ngay
-                        </button>
                     </div>
                 </div>
             </div>
-            
-            <!-- Intermediate Course -->
+
+            <!-- Trung cấp -->
             <div class="col-lg-4">
-                <div class="training-card h-100 bg-white rounded-4 shadow-sm border border-warning border-3 position-relative">
-                    <div class="popular-badge">
-                        <span class="badge bg-warning text-dark">Phổ biến</span>
+                <div class="course-card featured">
+                    <div class="course-img-wrap">
+                        <img src="https://www.malaymail.com/malaymail/uploads/images/2025/11/11/309213.JPG" alt="Trung cấp">
+                        <span class="level-chip level-mid">Trung cấp</span>
+                        <span class="hot-badge">⭐ Phổ biến</span>
                     </div>
-                    <div class="training-image">
-                        <img src="https://images.unsplash.com/photo-1544717297-fa95b6ee9643?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
-                             class="card-img-top rounded-top" alt="Khóa trung cấp">
-                        <div class="training-level">
-                            <span class="badge bg-warning text-dark">Trung cấp</span>
+                    <div class="course-body">
+                        <div class="course-name">Khóa cầu lông trung cấp</div>
+                        <div class="course-meta">
+                            <div class="meta-item"><i class="fas fa-clock" style="color:#f59e0b;"></i> 16 buổi</div>
+                            <div class="meta-item"><i class="fas fa-users" style="color:#3b82f6;"></i> 4-6 học viên</div>
+                            <div class="meta-item"><i class="fas fa-calendar" style="color:#8b5cf6;"></i> 2 buổi/tuần</div>
+                            <div class="meta-item"><i class="fas fa-hourglass" style="color:#10b981;"></i> 4 tháng</div>
                         </div>
-                    </div>
-                    <div class="card-body p-4">
-                        <h5 class="fw-bold mb-3">Khóa cầu lông trung cấp</h5>
-                        <div class="training-info mb-3">
-                            <div class="info-item mb-2">
-                                <i class="fas fa-clock text-warning me-2"></i>
-                                <span>16 buổi (4 tháng)</span>
-                            </div>
-                            <div class="info-item mb-2">
-                                <i class="fas fa-users text-info me-2"></i>
-                                <span>4-6 học viên/lớp</span>
-                            </div>
-                            <div class="info-item mb-2">
-                                <i class="fas fa-calendar text-primary me-2"></i>
-                                <span>2 buổi/tuần</span>
-                            </div>
-                            <div class="info-item">
-                                <i class="fas fa-money-bill text-success me-2"></i>
-                                <span class="fw-bold">2,800,000đ</span>
-                            </div>
+                        <ul class="list-unstyled course-features">
+                            <li><i class="fas fa-check-circle"></i> Kỹ thuật nâng cao</li>
+                            <li><i class="fas fa-check-circle"></i> Chiến thuật thi đấu</li>
+                            <li><i class="fas fa-check-circle"></i> Thể lực chuyên môn</li>
+                            <li><i class="fas fa-check-circle"></i> Thi đấu thực tế</li>
+                        </ul>
+                        <div class="price-row">
+                            <div class="course-price">2.800.000đ <small>/khóa</small></div>
+                            <button class="btn-enroll btn-enroll-gold" onclick="openRegModal('intermediate')">
+                                <i class="fas fa-star"></i> Đăng ký
+                            </button>
                         </div>
-                        <div class="training-content mb-3">
-                            <h6 class="fw-bold">Nội dung khóa học:</h6>
-                            <ul class="list-unstyled small">
-                                <li><i class="fas fa-check text-success me-2"></i>Kỹ thuật nâng cao</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Chiến thuật thi đấu</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Thể lực chuyên môn</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Thi đấu thực tế</li>
-                            </ul>
-                        </div>
-                        <button class="btn btn-warning w-100" data-course="intermediate">
-                            <i class="fas fa-star me-2"></i>Đăng ký ngay
-                        </button>
                     </div>
                 </div>
             </div>
-            
-            <!-- Advanced Course -->
+
+            <!-- Nâng cao -->
             <div class="col-lg-4">
-                <div class="training-card h-100 bg-white rounded-4 shadow-sm border">
-                    <div class="training-image">
-                        <img src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
-                             class="card-img-top rounded-top" alt="Khóa nâng cao">
-                        <div class="training-level">
-                            <span class="badge bg-danger">Nâng cao</span>
-                        </div>
+                <div class="course-card">
+                    <div class="course-img-wrap">
+                        <img src="https://i.pinimg.com/736x/f1/98/c0/f198c07645f847e714cb44ca60b12ffd.jpg" alt="Nâng cao">
+                        <span class="level-chip level-advanced">Nâng cao</span>
                     </div>
-                    <div class="card-body p-4">
-                        <h5 class="fw-bold mb-3">Khóa cầu lông nâng cao</h5>
-                        <div class="training-info mb-3">
-                            <div class="info-item mb-2">
-                                <i class="fas fa-clock text-warning me-2"></i>
-                                <span>20 buổi (5 tháng)</span>
-                            </div>
-                            <div class="info-item mb-2">
-                                <i class="fas fa-users text-info me-2"></i>
-                                <span>3-4 học viên/lớp</span>
-                            </div>
-                            <div class="info-item mb-2">
-                                <i class="fas fa-calendar text-primary me-2"></i>
-                                <span>3 buổi/tuần</span>
-                            </div>
-                            <div class="info-item">
-                                <i class="fas fa-money-bill text-success me-2"></i>
-                                <span class="fw-bold">4,500,000đ</span>
-                            </div>
+                    <div class="course-body">
+                        <div class="course-name">Khóa cầu lông nâng cao</div>
+                        <div class="course-meta">
+                            <div class="meta-item"><i class="fas fa-clock" style="color:#f59e0b;"></i> 20 buổi</div>
+                            <div class="meta-item"><i class="fas fa-users" style="color:#3b82f6;"></i> 3-4 học viên</div>
+                            <div class="meta-item"><i class="fas fa-calendar" style="color:#8b5cf6;"></i> 3 buổi/tuần</div>
+                            <div class="meta-item"><i class="fas fa-hourglass" style="color:#10b981;"></i> 5 tháng</div>
                         </div>
-                        <div class="training-content mb-3">
-                            <h6 class="fw-bold">Nội dung khóa học:</h6>
-                            <ul class="list-unstyled small">
-                                <li><i class="fas fa-check text-success me-2"></i>Kỹ thuật chuyên sâu</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Chiến thuật cao cấp</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Tâm lý thi đấu</li>
-                                <li><i class="fas fa-check text-success me-2"></i>Chuẩn bị thi đấu</li>
-                            </ul>
+                        <ul class="list-unstyled course-features">
+                            <li><i class="fas fa-check-circle"></i> Kỹ thuật chuyên sâu</li>
+                            <li><i class="fas fa-check-circle"></i> Chiến thuật cao cấp</li>
+                            <li><i class="fas fa-check-circle"></i> Tâm lý thi đấu</li>
+                            <li><i class="fas fa-check-circle"></i> Chuẩn bị thi đấu</li>
+                        </ul>
+                        <div class="price-row">
+                            <div class="course-price">4.500.000đ <small>/khóa</small></div>
+                            <button class="btn-enroll btn-enroll-red" onclick="openRegModal('advanced')">
+                                <i class="fas fa-trophy"></i> Đăng ký
+                            </button>
                         </div>
-                        <button class="btn btn-danger w-100" data-course="advanced">
-                            <i class="fas fa-trophy me-2"></i>Đăng ký ngay
-                        </button>
                     </div>
                 </div>
             </div>
@@ -178,199 +321,150 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </section>
 
-<!-- Coaches Section -->
-<section class="coaches-section py-5 bg-light">
+<!-- ===== COACHES ===== -->
+<section class="coaches-section">
     <div class="container">
-        <div class="row mb-5">
-            <div class="col-12 text-center">
-                <h2 class="fw-bold mb-3">Đội ngũ huấn luyện viên</h2>
-                <p class="text-muted">HLV giàu kinh nghiệm và tận tâm</p>
-            </div>
+        <div class="text-center mb-5">
+            <div class="section-label">Đội ngũ</div>
+            <h2 class="section-title-big">Huấn luyện viên của chúng tôi</h2>
+            <p class="section-sub">Chứng chỉ quốc tế, giàu kinh nghiệm và tận tâm</p>
         </div>
-        
         <div class="row g-4">
-            <!-- Coach 1 -->
             <div class="col-lg-4">
-                <div class="coach-card bg-white rounded-4 shadow-sm p-4 text-center">
-                    <div class="coach-avatar mb-3">
-                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80" 
-                             class="rounded-circle" alt="HLV Nguyễn Văn A">
+                <div class="coach-card">
+                    <div class="coach-avatar">
+                        <img src="https://i.pinimg.com/736x/9b/94/08/9b94086c48b773a09d8316398b2bf29e.jpg" alt="HLV A">
+                        <div class="coach-ring"></div>
                     </div>
-                    <h5 class="fw-bold mb-2">HLV Nguyễn Văn A</h5>
-                    <p class="text-muted mb-3">Chuyên gia kỹ thuật cơ bản</p>
-                    <div class="coach-info mb-3">
-                        <div class="info-badge mb-2">
-                            <i class="fas fa-medal text-warning me-2"></i>
-                            <span>15+ năm kinh nghiệm</span>
-                        </div>
-                        <div class="info-badge mb-2">
-                            <i class="fas fa-certificate text-success me-2"></i>
-                            <span>Chứng chỉ BWF Level 2</span>
-                        </div>
-                        <div class="info-badge">
-                            <i class="fas fa-users text-info me-2"></i>
-                            <span>500+ học viên</span>
-                        </div>
+                    <div class="coach-name">HLV Lữ Đăng Hưng</div>
+                    <div class="coach-role">Chuyên gia kỹ thuật cơ bản</div>
+                    <div>
+                        <span class="coach-tag"><i class="fas fa-medal" style="color:#f59e0b;"></i> 15 năm kinh nghiệm</span>
+                        <span class="coach-tag"><i class="fas fa-certificate" style="color:#10b981;"></i> BWF Level 2</span>
+                        <span class="coach-tag"><i class="fas fa-users" style="color:#3b82f6;"></i> 500+ học viên</span>
                     </div>
-                    <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#coach1Modal">
-                        <i class="fas fa-info-circle me-2"></i>Xem chi tiết
-                    </button>
                 </div>
             </div>
-            
-            <!-- Coach 2 -->
             <div class="col-lg-4">
-                <div class="coach-card bg-white rounded-4 shadow-sm p-4 text-center">
-                    <div class="coach-avatar mb-3">
-                        <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80" 
-                             class="rounded-circle" alt="HLV Trần Thị B">
+                <div class="coach-card" style="border-color:#fbbf24;">
+                    <div class="coach-avatar">
+                        <img src="https://www.welt.de/img/regionales/nrw/mobile160865126/4672500127-ci102l-w1024/urn-newsml-dpa-com-20090101-170104-99-747542-large-4-3-jpg.jpg" alt="HLV B">
+                        <div class="coach-ring"></div>
                     </div>
-                    <h5 class="fw-bold mb-2">HLV Trần Thị B</h5>
-                    <p class="text-muted mb-3">Chuyên gia chiến thuật</p>
-                    <div class="coach-info mb-3">
-                        <div class="info-badge mb-2">
-                            <i class="fas fa-medal text-warning me-2"></i>
-                            <span>12+ năm kinh nghiệm</span>
-                        </div>
-                        <div class="info-badge mb-2">
-                            <i class="fas fa-certificate text-success me-2"></i>
-                            <span>Chứng chỉ BWF Level 3</span>
-                        </div>
-                        <div class="info-badge">
-                            <i class="fas fa-trophy text-danger me-2"></i>
-                            <span>Cựu VĐV quốc gia</span>
-                        </div>
+                    <div class="coach-name">HLV Lê Anh Dũng</div>
+                    <div class="coach-role">Chuyên gia chiến thuật</div>
+                    <div>
+                        <span class="coach-tag"><i class="fas fa-medal" style="color:#f59e0b;"></i> 12 năm kinh nghiệm</span>
+                        <span class="coach-tag"><i class="fas fa-certificate" style="color:#10b981;"></i> BWF Level 3</span>
+                        <span class="coach-tag"><i class="fas fa-trophy" style="color:#ef4444;"></i> Cựu VĐV quốc gia</span>
                     </div>
-                    <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#coach2Modal">
-                        <i class="fas fa-info-circle me-2"></i>Xem chi tiết
-                    </button>
                 </div>
             </div>
-            
-            <!-- Coach 3 -->
             <div class="col-lg-4">
-                <div class="coach-card bg-white rounded-4 shadow-sm p-4 text-center">
-                    <div class="coach-avatar mb-3">
-                        <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80" 
-                             class="rounded-circle" alt="HLV Lê Văn C">
+                <div class="coach-card">
+                    <div class="coach-avatar">
+                        <img src="https://tse3.mm.bing.net/th/id/OIP.eXWUbtvWHob-V_ccaDcMlQHaEa?r=0&cb=thfc1falcon2&rs=1&pid=ImgDetMain&o=7&rm=3" alt="HLV C">
+                        <div class="coach-ring"></div>
                     </div>
-                    <h5 class="fw-bold mb-2">HLV Lê Văn C</h5>
-                    <p class="text-muted mb-3">Chuyên gia thể lực</p>
-                    <div class="coach-info mb-3">
-                        <div class="info-badge mb-2">
-                            <i class="fas fa-medal text-warning me-2"></i>
-                            <span>10+ năm kinh nghiệm</span>
-                        </div>
-                        <div class="info-badge mb-2">
-                            <i class="fas fa-certificate text-success me-2"></i>
-                            <span>Chứng chỉ Fitness</span>
-                        </div>
-                        <div class="info-badge">
-                            <i class="fas fa-dumbbell text-primary me-2"></i>
-                            <span>Chuyên gia thể lực</span>
-                        </div>
+                    <div class="coach-name">HLV Lê Văn C</div>
+                    <div class="coach-role">Chuyên gia thể lực</div>
+                    <div>
+                        <span class="coach-tag"><i class="fas fa-medal" style="color:#f59e0b;"></i> 10 năm kinh nghiệm</span>
+                        <span class="coach-tag"><i class="fas fa-certificate" style="color:#10b981;"></i> Fitness Level 3</span>
+                        <span class="coach-tag"><i class="fas fa-dumbbell" style="color:#6366f1;"></i> Chuyên gia thể lực</span>
                     </div>
-                    <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#coach3Modal">
-                        <i class="fas fa-info-circle me-2"></i>Xem chi tiết
-                    </button>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Training Registration -->
-<section class="training-registration py-5">
+<!-- ===== REGISTRATION ===== -->
+<section class="reg-section">
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-lg-8">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0 fw-bold">
-                            <i class="fas fa-user-plus me-2"></i>Đăng ký khóa học
-                        </h5>
+                <div class="reg-card">
+                    <div class="reg-header">
+                        <div style="display:flex;align-items:center;gap:1rem;">
+                            <div style="width:48px;height:48px;background:rgba(251,191,36,.2);border-radius:14px;display:flex;align-items:center;justify-content:center;">
+                                <i class="fas fa-user-plus" style="color:#fbbf24;font-size:1.2rem;"></i>
+                            </div>
+                            <div>
+                                <h3>Đăng ký khóa học</h3>
+                                <p class="mb-0">Điền thông tin để chúng tôi liên hệ xác nhận</p>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body p-4">
+                    <div class="reg-body">
                         <form id="trainingForm">
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold">Họ và tên *</label>
-                                    <input type="text" class="form-control" name="student_name" required
-                                           placeholder="Nhập họ và tên">
+                                    <label class="form-label-white">Họ và tên *</label>
+                                    <input type="text" name="student_name" class="form-control form-control-dark" placeholder="Nhập họ và tên" required>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold">Số điện thoại *</label>
-                                    <input type="tel" class="form-control" name="phone" required
-                                           placeholder="0123456789">
+                                    <label class="form-label-white">Số điện thoại *</label>
+                                    <input type="tel" name="phone" class="form-control form-control-dark" placeholder="0123456789" required>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold">Email</label>
-                                    <input type="email" class="form-control" name="email"
-                                           placeholder="email@example.com">
+                                    <label class="form-label-white">Email</label>
+                                    <input type="email" name="email" class="form-control form-control-dark" placeholder="email@example.com">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold">Tuổi *</label>
-                                    <select class="form-select" name="age_group" required>
+                                    <label class="form-label-white">Độ tuổi *</label>
+                                    <select name="age_group" class="form-select form-select-dark" required>
                                         <option value="">Chọn độ tuổi</option>
-                                        <option value="6-12">6-12 tuổi</option>
-                                        <option value="13-17">13-17 tuổi</option>
-                                        <option value="18-30">18-30 tuổi</option>
-                                        <option value="30+">Trên 30 tuổi</option>
+                                        <option>6-12 tuổi</option>
+                                        <option>13-17 tuổi</option>
+                                        <option>18-30 tuổi</option>
+                                        <option>Trên 30 tuổi</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold">Khóa học *</label>
-                                    <select class="form-select" name="course" required id="courseSelect">
+                                    <label class="form-label-white">Khóa học *</label>
+                                    <select name="course" class="form-select form-select-dark" id="courseSelect" required>
                                         <option value="">Chọn khóa học</option>
-                                        <option value="beginner">Cơ bản - 1,800,000đ</option>
-                                        <option value="intermediate">Trung cấp - 2,800,000đ</option>
-                                        <option value="advanced">Nâng cao - 4,500,000đ</option>
+                                        <option value="beginner">Cơ bản — 1.800.000đ</option>
+                                        <option value="intermediate">Trung cấp — 2.800.000đ</option>
+                                        <option value="advanced">Nâng cao — 4.500.000đ</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold">Trình độ hiện tại</label>
-                                    <select class="form-select" name="current_level">
-                                        <option value="">Chọn trình độ</option>
-                                        <option value="beginner">Mới bắt đầu</option>
-                                        <option value="basic">Biết cơ bản</option>
-                                        <option value="intermediate">Trung bình</option>
-                                        <option value="advanced">Khá</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Thời gian học mong muốn</label>
-                                    <select class="form-select" name="preferred_time">
+                                    <label class="form-label-white">Thời gian học</label>
+                                    <select name="preferred_time" class="form-select form-select-dark">
                                         <option value="">Chọn thời gian</option>
-                                        <option value="morning">Sáng (6:00-9:00)</option>
-                                        <option value="afternoon">Chiều (14:00-17:00)</option>
-                                        <option value="evening">Tối (18:00-21:00)</option>
+                                        <option>Sáng (6:00–9:00)</option>
+                                        <option>Chiều (14:00–17:00)</option>
+                                        <option>Tối (18:00–21:00)</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold">HLV mong muốn</label>
-                                    <select class="form-select" name="preferred_coach">
+                                    <label class="form-label-white">HLV mong muốn</label>
+                                    <select name="preferred_coach" class="form-select form-select-dark">
                                         <option value="">Chọn HLV</option>
-                                        <option value="coach1">HLV Nguyễn Văn A</option>
-                                        <option value="coach2">HLV Trần Thị B</option>
-                                        <option value="coach3">HLV Lê Văn C</option>
+                                        <option>HLV Lữ Đăng Hưng</option>
+                                        <option>HLV Lê Anh Dũng</option>
+                                        <option>HLV Lê Văn C</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label-white">Trình độ hiện tại</label>
+                                    <select name="current_level" class="form-select form-select-dark">
+                                        <option value="">Chọn trình độ</option>
+                                        <option>Mới bắt đầu</option>
+                                        <option>Biết cơ bản</option>
+                                        <option>Trung bình</option>
+                                        <option>Khá</option>
                                     </select>
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label fw-bold">Mục tiêu học tập</label>
-                                    <textarea class="form-control" name="learning_goals" rows="3"
-                                              placeholder="Mô tả mục tiêu và mong muốn của bạn khi học cầu lông..."></textarea>
+                                    <label class="form-label-white">Mục tiêu học tập</label>
+                                    <textarea name="learning_goals" rows="3" class="form-control form-control-dark" placeholder="Chia sẻ mục tiêu của bạn..."></textarea>
                                 </div>
                                 <div class="col-12">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="agreeTrainingTerms" required>
-                                        <label class="form-check-label" for="agreeTrainingTerms">
-                                            Tôi đồng ý với <a href="#" data-bs-toggle="modal" data-bs-target="#trainingTermsModal">điều khoản khóa học</a>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-warning btn-lg w-100">
-                                        <i class="fas fa-graduation-cap me-2"></i>Đăng ký khóa học
+                                    <button type="submit" class="btn-register-main">
+                                        <i class="fas fa-graduation-cap me-2"></i>Đăng ký khóa học ngay
                                     </button>
                                 </div>
                             </div>
@@ -381,27 +475,184 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 </section>
+</div>
 
-<!-- Success Modal -->
-<div class="modal fade" id="trainingSuccessModal" tabindex="-1">
+<!-- ===== STUDENT CARD MODAL ===== -->
+<div class="modal fade" id="studentCardModal" tabindex="-1" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-body text-center p-4">
-                <div class="success-icon mb-3">
-                    <i class="fas fa-check-circle fa-4x text-success"></i>
+        <div class="modal-content border-0 shadow-lg" style="border-radius:24px;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#0f0c29,#302b63);padding:1.5rem 2rem;color:#fff;text-align:center;">
+                <i class="fas fa-check-circle fa-2x mb-2 d-block" style="color:#fbbf24;"></i>
+                <h5 class="fw-bold mb-1">Đăng ký thành công!</h5>
+                <small style="opacity:.7;">Thẻ học viên của bạn đã được tạo</small>
+            </div>
+
+            <div id="student-card-print" style="padding:1.5rem;">
+                <div id="student-card" style="background:linear-gradient(135deg,#0f0c29 0%,#302b63 100%);border-radius:18px;padding:1.8rem;color:#fff;position:relative;overflow:hidden;margin-bottom:1rem;">
+                    <div style="position:absolute;top:-30px;right:-30px;width:150px;height:150px;background:rgba(251,191,36,.1);border-radius:50%;"></div>
+                    <div style="position:absolute;bottom:-40px;left:-20px;width:120px;height:120px;background:rgba(99,102,241,.1);border-radius:50%;"></div>
+
+                    <div class="d-flex justify-content-between align-items-start mb-3" style="position:relative;z-index:1;">
+                        <div>
+                            <div style="font-size:.68rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:1px;">BadmintonPro Academy</div>
+                            <div style="font-size:1.1rem;font-weight:800;color:#fbbf24;">THẺ HỌC VIÊN</div>
+                        </div>
+                        <div style="background:rgba(251,191,36,.2);border:1px solid rgba(251,191,36,.4);border-radius:8px;padding:4px 10px;font-size:.72rem;font-weight:700;color:#fbbf24;">ACTIVE</div>
+                    </div>
+
+                    <div style="text-align:center;margin:1rem 0;position:relative;z-index:1;">
+                        <div style="font-size:.68rem;color:rgba(255,255,255,.5);margin-bottom:.3rem;">MÃ HỌC VIÊN</div>
+                        <div id="sc-code" style="font-size:1.8rem;font-weight:900;letter-spacing:4px;color:#fff;font-family:monospace;"></div>
+                    </div>
+
+                    <div style="text-align:center;margin:1rem 0;position:relative;z-index:1;">
+                        <div id="sc-qr" style="display:inline-block;background:#fff;padding:10px;border-radius:12px;"></div>
+                        <div style="font-size:.68rem;color:rgba(255,255,255,.5);margin-top:.5rem;">Quét mã để xác nhận học viên</div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem;position:relative;z-index:1;">
+                        <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:.7rem;">
+                            <div style="font-size:.62rem;color:rgba(255,255,255,.5);text-transform:uppercase;">Họ tên</div>
+                            <div id="sc-name" style="font-weight:700;font-size:.85rem;"></div>
+                        </div>
+                        <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:.7rem;">
+                            <div style="font-size:.62rem;color:rgba(255,255,255,.5);text-transform:uppercase;">Khóa học</div>
+                            <div id="sc-course" style="font-weight:700;font-size:.85rem;color:#fbbf24;"></div>
+                        </div>
+                        <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:.7rem;">
+                            <div style="font-size:.62rem;color:rgba(255,255,255,.5);text-transform:uppercase;">Ngày đăng ký</div>
+                            <div id="sc-date" style="font-weight:700;font-size:.85rem;"></div>
+                        </div>
+                        <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:.7rem;">
+                            <div style="font-size:.62rem;color:rgba(255,255,255,.5);text-transform:uppercase;">HLV kèm 1-1</div>
+                            <div id="sc-coach" style="font-weight:700;font-size:.85rem;color:#a5b4fc;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Lịch học 3 ngày/tuần -->
+                    <div style="margin-top:.8rem;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:10px;padding:.7rem;position:relative;z-index:1;">
+                        <div style="font-size:.62rem;color:rgba(255,255,255,.5);text-transform:uppercase;margin-bottom:.3rem;">
+                            <i class="fas fa-calendar-alt me-1"></i>Lịch học (3 ngày/tuần)
+                        </div>
+                        <div id="sc-schedule" style="font-weight:700;font-size:.85rem;color:#c7d2fe;"></div>
+                        <div id="sc-time" style="font-size:.75rem;color:rgba(255,255,255,.6);margin-top:.2rem;"></div>
+                    </div>
+
+                    <!-- Slot còn lại -->
+                    <div style="margin-top:.6rem;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.2);border-radius:10px;padding:.5rem .7rem;text-align:center;position:relative;z-index:1;">
+                        <span id="sc-slots" style="font-weight:700;font-size:.8rem;color:#4ade80;"></span>
+                    </div>
+
+                    <div style="margin-top:.6rem;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:.5rem .7rem;text-align:center;position:relative;z-index:1;">
+                        <span id="sc-phone" style="font-weight:700;color:#fbbf24;font-size:.85rem;"></span>
+                    </div>
                 </div>
-                <h4 class="fw-bold text-success mb-3">Đăng ký thành công!</h4>
-                <p class="text-muted mb-4">Chúng tôi đã nhận được đăng ký khóa học của bạn. Đội ngũ sẽ liên hệ để xác nhận lịch học.</p>
-                <div class="d-grid gap-2">
-                    <button class="btn btn-success" data-bs-dismiss="modal">
-                        <i class="fas fa-check me-2"></i>Hoàn thành
-                    </button>
+
+                <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:1rem;font-size:.82rem;color:#92400e;text-align:center;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Xuất trình mã thẻ hoặc QR code cho nhân viên khi đến sân tập
                 </div>
+            </div>
+
+            <div style="padding:1rem 1.5rem;border-top:1px solid #f3f4f6;display:flex;gap:.8rem;">
+                <button onclick="printStudentCard()" class="btn flex-grow-1 py-2 fw-bold" style="background:linear-gradient(135deg,#0f0c29,#302b63);color:#fff;border:none;border-radius:12px;">
+                    <i class="fas fa-print me-2"></i>In thẻ học viên
+                </button>
+                <button class="btn py-2 fw-bold" style="background:#f3f4f6;color:#374151;border:none;border-radius:12px;padding:0 1.5rem;" data-bs-dismiss="modal">
+                    Đóng
+                </button>
             </div>
         </div>
     </div>
 </div>
 
+<style>
+@media print {
+    body * { visibility: hidden; }
+    #student-card-print, #student-card-print * { visibility: visible; }
+    #student-card-print { position: fixed; top: 0; left: 0; width: 100%; padding: 1rem; }
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+const courseLabels = {
+    'beginner':     'Cơ bản (3 tháng)',
+    'intermediate': 'Trung cấp (4 tháng)',
+    'advanced':     'Nâng cao (5 tháng)',
+};
+
+function openRegModal(course) {
+    const select = document.getElementById('courseSelect');
+    if (select) select.value = course;
+    document.querySelector('.reg-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+document.getElementById('trainingForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const btn = this.querySelector('button[type=submit]');
+    btn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Đang xử lý...';
+    btn.disabled = true;
+
+    const formData = new FormData(this);
+
+    fetch('api/training.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // Điền thông tin thẻ từ server
+                document.getElementById('sc-code').textContent   = data.student_code;
+                document.getElementById('sc-name').textContent   = data.student_name;
+                document.getElementById('sc-course').textContent = data.course_label;
+                document.getElementById('sc-date').textContent   = data.registered_at;
+                document.getElementById('sc-coach').textContent  = data.coach;
+                document.getElementById('sc-phone').textContent  = data.phone ? `SĐT: ${data.phone}` : '';
+
+                // Cập nhật lịch học
+                const scheduleEl = document.getElementById('sc-schedule');
+                if (scheduleEl) scheduleEl.textContent = data.schedule_days || '';
+
+                const timeEl = document.getElementById('sc-time');
+                if (timeEl) timeEl.textContent = data.schedule_time || '';
+
+                const slotEl = document.getElementById('sc-slots');
+                if (slotEl) {
+                    slotEl.textContent = data.is_full ? 'HLV đã đủ học viên tuần này' : `Còn ${data.remaining_slots} chỗ trống tuần này`;
+                    slotEl.style.color = data.is_full ? '#ef4444' : '#4ade80';
+                }
+
+                // Tạo QR Code với data từ server
+                const qrEl = document.getElementById('sc-qr');
+                qrEl.innerHTML = '';
+                new QRCode(qrEl, {
+                    text: data.qr_data,
+                    width: 120, height: 120,
+                    colorDark: '#0f0c29', colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.H
+                });
+
+                new bootstrap.Modal(document.getElementById('studentCardModal')).show();
+                this.reset();
+            } else {
+                alert('Lỗi: ' + data.error);
+            }
+        })
+        .catch(err => {
+            console.error('Training API error:', err);
+            alert('Có lỗi xảy ra. Vui lòng thử lại.');
+        })
+        })
+        .finally(() => {
+            btn.innerHTML = '<i class="fas fa-graduation-cap me-2"></i>Đăng ký khóa học ngay';
+            btn.disabled = false;
+        });
+});
+
+function printStudentCard() {
+    window.print();
+}
+</script>
+
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
-<script src="assets/js/training.js"></script>

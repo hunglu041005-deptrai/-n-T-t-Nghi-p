@@ -98,6 +98,13 @@ if (!$stmt->execute()) {
 $booking_id = $stmt->insert_id;
 $stmt->close();
 
+// Gửi thông báo đặt sân thành công
+try {
+    require_once __DIR__ . '/includes/notification-system.php';
+    $ns = new NotificationSystem();
+    $ns->notifyBookingConfirmed($booking_id);
+} catch (Exception $e) { /* Không để lỗi ảnh hưởng flow đặt sân */ }
+
 // Xử lý theo phương thức thanh toán
 if ($payment_method === 'vnpay' && class_exists('PaymentGateway')) {
     $vnpay_url = PaymentGateway::generateVNPayLink($booking_id, $total_price, 'Đặt sân - ' . $court['name'], $user_id);

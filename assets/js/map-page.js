@@ -208,6 +208,9 @@ class FullScreenCourtMap {
         const marker = L.marker([court.lat, court.lng], {icon: markerIcon})
             .addTo(this.map)
             .on('click', () => this.selectCourt(court));
+        
+        // Gắn courtData để map.php có thể tìm marker theo court.id
+        marker.courtData = court;
             
         // Add detailed popup
         const popupContent = `
@@ -633,7 +636,6 @@ class FullScreenCourtMap {
         
         // Show result message
         const resultCount = this.filteredCourts.length;
-        this.showToast(`Tìm thấy ${resultCount} sân phù hợp`, resultCount > 0 ? 'success' : 'warning');
     }
     
     resetSearch() {
@@ -698,6 +700,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Leaflet loaded, creating map instance...');
         // Initialize map after Leaflet is loaded
         window.fullScreenMap = new FullScreenCourtMap();
+        window.courtMapInstance = window.fullScreenMap; // alias cho map.php dùng
     };
     leafletJS.onerror = function() {
         console.error('Failed to load Leaflet');

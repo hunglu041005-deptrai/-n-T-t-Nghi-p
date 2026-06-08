@@ -33,7 +33,7 @@
             <div class="col-md-3 col-sm-6">
                 <h6 class="mb-3">Liên Hệ</h6>
                 <ul class="list-unstyled small text-muted">
-                    <li class="mb-2"><i class="fas fa-phone me-2"></i> <a href="tel:0123456789" class="text-light text-decoration-none">0123.456.789</a></li>
+                    <li class="mb-2"><i class="fas fa-phone me-2"></i> <a href="tel:0968073500" class="text-light text-decoration-none">0968.073.500</a></li>
                     <li class="mb-2"><i class="fas fa-envelope me-2"></i> <a href="mailto:support@badmintonpro.vn" class="text-light text-decoration-none">support@badmintonpro.vn</a></li>
                     <li class="mb-2"><i class="fas fa-map-marker-alt me-2"></i> Hà Nội, Việt Nam</li>
                 </ul>

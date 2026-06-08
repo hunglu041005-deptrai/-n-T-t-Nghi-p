@@ -15,10 +15,13 @@ $filters = [
 $courts = getCourts($filters);
 $locations = getLocations();
 
-// Filter for featured courts (simulate featured logic)
-$featuredCourts = array_filter($courts, function($court) {
-    return $court['id'] % 3 === 0; // Simple logic for demo
-});
+// Lấy sân được đánh dấu nổi bật từ database
+$featuredCourts = array_filter($courts, fn($c) => !empty($c['featured']));
+
+// Nếu không có sân nổi bật thì lấy tất cả
+if (empty($featuredCourts)) {
+    $featuredCourts = $courts;
+}
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -228,16 +231,24 @@ require_once __DIR__ . '/includes/header.php';
                                         <!-- Actions -->
                                         <div class="mt-auto">
                                             <div class="d-grid gap-2">
-                                                <a href="court.php?id=<?php echo $court['id']; ?>" class="btn btn-warning">
-                                                    <i class="fas fa-eye me-2"></i>Xem chi tiết & Đặt sân
+                                                <a href="booking-online.php?court_id=<?php echo $court['id']; ?>" 
+                                                   class="btn btn-warning fw-bold">
+                                                    <i class="fas fa-calendar-check me-2"></i>Đặt sân ngay
                                                 </a>
                                                 <div class="d-flex gap-2">
-                                                    <button class="btn btn-outline-primary btn-sm flex-fill">
+                                                    <?php
+                                                    $phone = $court['phone'] ?? '0901234500';
+                                                    $phoneDisplay = preg_replace('/(\d{4})(\d{3})(\d{3})/', '$1.$2.$3', $phone);
+                                                    ?>
+                                                    <a href="tel:<?php echo $phone; ?>"
+                                                       class="btn btn-outline-primary btn-sm flex-fill"
+                                                       onclick="return confirmCall('<?php echo escape($court['name']); ?>', '<?php echo $phone; ?>', '<?php echo $phoneDisplay; ?>')">
                                                         <i class="fas fa-phone me-1"></i>Gọi ngay
-                                                    </button>
-                                                    <button class="btn btn-outline-info btn-sm flex-fill">
+                                                    </a>
+                                                    <a href="map.php?court_id=<?php echo $court['id']; ?>&name=<?php echo urlencode($court['name']); ?>&lat=<?php echo $court['latitude'] ?? '21.0285'; ?>&lng=<?php echo $court['longitude'] ?? '105.8542'; ?>" 
+                                                       class="btn btn-outline-info btn-sm flex-fill">
                                                         <i class="fas fa-map-marker-alt me-1"></i>Chỉ đường
-                                                    </button>
+                                                    </a>
                                                 </div>
                                             </div>
                                         </div>
@@ -366,4 +377,60 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// Hàm xác nhận gọi điện
+function confirmCall(courtName, phone, phoneDisplay) {
+    document.getElementById('callCourtName').textContent = courtName;
+    document.getElementById('callPhoneDisplay').textContent = phoneDisplay;
+    document.getElementById('callPhoneLink').href = 'tel:' + phone;
+    document.getElementById('callPhoneLink').setAttribute('data-phone', phone);
+    new bootstrap.Modal(document.getElementById('callModal')).show();
+    return false; // Ngăn href tel: chạy trước khi modal hiện
+}
 </script>
+
+<!-- Modal xác nhận gọi điện -->
+<div class="modal fade" id="callModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:360px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:20px;overflow:hidden;">
+            <!-- Header xanh gradient -->
+            <div style="background:linear-gradient(135deg,#0d6efd,#0dcaf0);padding:1.4rem 1.5rem;text-align:center;color:#fff;">
+                <div style="width:60px;height:60px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto .8rem;">
+                    <i class="fas fa-phone fa-xl"></i>
+                </div>
+                <h5 class="fw-bold mb-1">Gọi cho sân</h5>
+                <div id="callCourtName" style="opacity:.85;font-size:.9rem;"></div>
+            </div>
+
+            <!-- Body -->
+            <div style="padding:1.5rem;text-align:center;">
+                <div style="font-size:.85rem;color:#6b7280;margin-bottom:1rem;">Số điện thoại liên hệ:</div>
+                <div id="callPhoneDisplay"
+                     style="font-size:1.8rem;font-weight:900;color:#0d6efd;letter-spacing:2px;margin-bottom:.5rem;"></div>
+                <div style="font-size:.78rem;color:#9ca3af;margin-bottom:1.5rem;">
+                    <i class="fas fa-clock me-1"></i>Hỗ trợ 6:00 – 22:00 hàng ngày
+                </div>
+
+                <div class="d-grid gap-2">
+                    <a id="callPhoneLink" href="#"
+                       class="btn btn-primary btn-lg fw-bold"
+                       style="border-radius:14px;background:linear-gradient(135deg,#0d6efd,#0dcaf0);border:none;"
+                       onclick="document.getElementById('callModal').querySelector('.btn-close').click()">
+                        <i class="fas fa-phone me-2"></i>Gọi ngay
+                    </a>
+                    <button class="btn btn-outline-secondary"
+                            style="border-radius:14px;"
+                            data-bs-dismiss="modal">
+                        Huỷ
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="padding:.7rem;background:#f9fafb;text-align:center;font-size:.75rem;color:#9ca3af;border-top:1px solid #f0f0f0;">
+                <i class="fas fa-shield-alt me-1 text-success"></i>
+                Cuộc gọi trực tiếp tới sân — không qua trung gian
+            </div>
+        </div>
+    </div>
+</div>

@@ -282,36 +282,75 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                         
                         <div class="col-md-4">
-                            <div class="additional-service-card text-center p-4 bg-light rounded-4">
-                                <i class="fas fa-mobile-alt fa-3x text-primary mb-3"></i>
-                                <h6 class="fw-bold">Ứng dụng di động</h6>
-                                <p class="text-muted small">Tải app để trải nghiệm tốt hơn</p>
-                                <div class="d-flex gap-1 justify-content-center">
-                                    <a href="#" class="btn btn-outline-dark btn-sm">iOS</a>
-                                    <a href="#" class="btn btn-outline-dark btn-sm">Android</a>
+                            <!-- Ứng dụng di động -->
+                            <div class="additional-service-card text-center p-4 bg-white rounded-4 border shadow-sm h-100">
+                                <div class="service-icon-wrap mb-3">
+                                    <div style="width:64px;height:64px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto;">
+                                        <i class="fas fa-mobile-alt fa-2x text-white"></i>
+                                    </div>
+                                </div>
+                                <h6 class="fw-bold mb-2">Ứng dụng di động</h6>
+                                <p class="text-muted small mb-3">Đặt sân mọi lúc mọi nơi, nhận thông báo tức thì</p>
+                                <div class="d-flex gap-2 justify-content-center">
+                                    <a href="#" class="btn btn-dark btn-sm d-flex align-items-center gap-1" style="border-radius:8px;">
+                                        <i class="fab fa-apple"></i> iOS
+                                    </a>
+                                    <a href="#" class="btn btn-success btn-sm d-flex align-items-center gap-1" style="border-radius:8px;">
+                                        <i class="fab fa-google-play"></i> Android
+                                    </a>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted"><i class="fas fa-star text-warning me-1"></i>4.8 · 10K+ lượt tải</small>
                                 </div>
                             </div>
                         </div>
-                        
+
+                        <!-- Hỗ trợ 24/7 -->
                         <div class="col-md-4">
-                            <div class="additional-service-card text-center p-4 bg-light rounded-4">
-                                <i class="fas fa-headset fa-3x text-success mb-3"></i>
-                                <h6 class="fw-bold">Hỗ trợ 24/7</h6>
-                                <p class="text-muted small">Tư vấn và giải đáp mọi thắc mắc</p>
-                                <button class="btn btn-outline-success btn-sm">
-                                    <i class="fas fa-phone me-1"></i>Hotline
-                                </button>
+                            <div class="additional-service-card text-center p-4 bg-white rounded-4 border shadow-sm h-100">
+                                <div class="service-icon-wrap mb-3">
+                                    <div style="width:64px;height:64px;background:linear-gradient(135deg,#28a745,#20c997);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto;">
+                                        <i class="fas fa-headset fa-2x text-white"></i>
+                                    </div>
+                                </div>
+                                <h6 class="fw-bold mb-2">Hỗ trợ 24/7</h6>
+                                <p class="text-muted small mb-3">Tư vấn và giải đáp mọi thắc mắc qua nhiều kênh</p>
+                                <div class="d-grid gap-2">
+                                    <a href="tel:0968073500" class="btn btn-success btn-sm" style="border-radius:8px;">
+                                        <i class="fas fa-phone me-2"></i>Gọi: 0968.073.500
+                                    </a>
+                                    <button class="btn btn-outline-success btn-sm" style="border-radius:8px;"
+                                            onclick="openLiveChat()">
+                                        <i class="fas fa-comments me-2"></i>Chat trực tuyến
+                                    </button>
+                                    <a href="mailto:support@badmintonpro.vn" class="btn btn-outline-secondary btn-sm" style="border-radius:8px;">
+                                        <i class="fas fa-envelope me-2"></i>Gửi email
+                                    </a>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted"><i class="fas fa-clock text-success me-1"></i>Phản hồi trong vòng 5 phút</small>
+                                </div>
                             </div>
                         </div>
-                        
+
+                        <!-- Chương trình VIP -->
                         <div class="col-md-4">
-                            <div class="additional-service-card text-center p-4 bg-light rounded-4">
-                                <i class="fas fa-gift fa-3x text-warning mb-3"></i>
-                                <h6 class="fw-bold">Chương trình VIP</h6>
-                                <p class="text-muted small">Ưu đãi đặc biệt cho thành viên</p>
-                                <button class="btn btn-outline-warning btn-sm">
-                                    <i class="fas fa-crown me-1"></i>Tham gia
-                                </button>
+                            <div class="additional-service-card text-center p-4 bg-white rounded-4 border shadow-sm h-100" style="border-color:#fbbf24 !important;background:linear-gradient(135deg,#fffbeb,#fff) !important;">
+                                <div class="service-icon-wrap mb-3">
+                                    <div style="width:64px;height:64px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto;">
+                                        <i class="fas fa-crown fa-2x text-white"></i>
+                                    </div>
+                                </div>
+                                <h6 class="fw-bold mb-2">Gói hội viên VIP</h6>
+                                <p class="text-muted small mb-3">Combo vé ưu đãi, tặng vé miễn phí, tiết kiệm đến 10%</p>
+                                <ul class="list-unstyled text-start mb-3" style="font-size:.82rem;">
+                                    <li class="mb-1"><i class="fas fa-check text-success me-2"></i>10 vé tặng 1 vé miễn phí</li>
+                                    <li class="mb-1"><i class="fas fa-check text-success me-2"></i>Thời hạn 3 – 12 tháng</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Giá chỉ từ 720.000đ</li>
+                                </ul>
+                                <a href="membership.php" class="btn btn-warning btn-sm w-100 fw-bold" style="border-radius:8px;">
+                                    <i class="fas fa-id-card me-2"></i>Xem các gói ngay
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -346,11 +385,11 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="contact-info">
                             <div class="contact-item mb-2">
                                 <i class="fas fa-phone text-primary me-2"></i>
-                                <span>1900 1234</span>
+                                <span>0968.073.500</span>
                             </div>
                             <div class="contact-item mb-2">
                                 <i class="fas fa-envelope text-primary me-2"></i>
-                                <span>info@badmintonpro.vn</span>
+                                <span>hung@admin.vn </span>
                             </div>
                             <div class="contact-item mb-2">
                                 <i class="fas fa-map-marker-alt text-primary me-2"></i>
@@ -469,4 +508,133 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// Live Chat function
+function openLiveChat() {
+    const modal = document.getElementById('liveChatModal');
+    new bootstrap.Modal(modal).show();
+    setTimeout(() => {
+        document.getElementById('chatInput')?.focus();
+    }, 400);
+}
+</script>
+
+<!-- Live Chat Modal -->
+<div class="modal fade" id="liveChatModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:20px;overflow:hidden;">
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#28a745,#20c997);padding:1.2rem 1.5rem;display:flex;align-items:center;gap:.8rem;">
+                <div style="width:44px;height:44px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                    <i class="fas fa-headset text-white fa-lg"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="text-white fw-bold">Hỗ trợ BadmintonPro</div>
+                    <div style="color:rgba(255,255,255,.8);font-size:.75rem;">
+                        <span style="display:inline-block;width:8px;height:8px;background:#90ee90;border-radius:50%;margin-right:4px;"></span>
+                        Đang trực tuyến · Phản hồi trong 5 phút
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Chat area -->
+            <div id="chatMessages" style="height:280px;overflow-y:auto;padding:1rem;background:#f8fafc;display:flex;flex-direction:column;gap:.7rem;">
+                <!-- Bot welcome -->
+                <div style="display:flex;align-items:flex-end;gap:.5rem;">
+                    <div style="width:32px;height:32px;background:#28a745;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-robot text-white" style="font-size:.7rem;"></i>
+                    </div>
+                    <div style="background:#fff;border-radius:14px 14px 14px 0;padding:.7rem 1rem;max-width:78%;box-shadow:0 2px 8px rgba(0,0,0,.08);font-size:.85rem;">
+                        Xin chào! 👋 Tôi là trợ lý BadmintonPro. Tôi có thể giúp gì cho bạn?
+                    </div>
+                </div>
+                <!-- Quick options -->
+                <div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-left:2.5rem;">
+                    <button class="quick-chat-btn" onclick="sendQuick('Tôi muốn đặt sân')">🏸 Đặt sân</button>
+                    <button class="quick-chat-btn" onclick="sendQuick('Hỏi về gói hội viên')">💎 Hội viên</button>
+                    <button class="quick-chat-btn" onclick="sendQuick('Đăng ký khóa học')">📚 Khóa học</button>
+                    <button class="quick-chat-btn" onclick="sendQuick('Hỏi về giá cả')">💰 Giá cả</button>
+                </div>
+            </div>
+
+            <!-- Input -->
+            <div style="padding:.8rem 1rem;border-top:1px solid #f0f0f0;display:flex;gap:.5rem;">
+                <input type="text" id="chatInput"
+                       placeholder="Nhập tin nhắn..."
+                       style="flex:1;border:1.5px solid #e5e7eb;border-radius:50px;padding:.5rem 1rem;font-size:.85rem;outline:none;"
+                       onkeydown="if(event.key==='Enter') sendChat()">
+                <button onclick="sendChat()" style="width:40px;height:40px;background:linear-gradient(135deg,#28a745,#20c997);border:none;border-radius:50%;color:#fff;cursor:pointer;flex-shrink:0;">
+                    <i class="fas fa-paper-plane" style="font-size:.85rem;"></i>
+                </button>
+            </div>
+
+            <!-- Footer -->
+            <div style="padding:.5rem 1rem;background:#f9fafb;text-align:center;font-size:.73rem;color:#9ca3af;border-top:1px solid #f0f0f0;">
+                Hoặc gọi trực tiếp: <a href="tel:0123456789" style="color:#28a745;font-weight:700;">0968073500</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.quick-chat-btn {
+    background: #fff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 50px;
+    padding: 4px 10px;
+    font-size: .75rem;
+    cursor: pointer;
+    transition: all .15s;
+    font-weight: 600;
+    color: #374151;
+}
+.quick-chat-btn:hover { border-color: #28a745; color: #28a745; background: #f0fdf4; }
+</style>
+
+<script>
+const botReplies = {
+    'Tôi muốn đặt sân': 'Tuyệt! Bạn có thể đặt sân trực tiếp tại <a href="booking-online.php" style="color:#28a745;font-weight:700;">trang đặt sân</a>. Chọn sân → chọn giờ → thanh toán là xong! 🏸',
+    'Hỏi về gói hội viên': 'Chúng tôi có nhiều gói hội viên từ 720.000đ/3 tháng. Xem chi tiết tại <a href="membership.php" style="color:#28a745;font-weight:700;">Gói hội viên</a>. Mua combo 10 vé tặng 1 vé! 💎',
+    'Đăng ký khóa học': 'Các khóa học cầu lông từ cơ bản đến nâng cao. Xem và đăng ký tại <a href="training.php" style="color:#28a745;font-weight:700;">Đào tạo</a>. HLV chuyên nghiệp, lớp 4-6 người! 📚',
+    'Hỏi về giá cả': 'Giá sân từ 80.000đ - 200.000đ/giờ tùy khu vực và giờ chơi. Giờ cao điểm (18-21h) tăng 20%. Xem thêm tại <a href="index.php" style="color:#28a745;font-weight:700;">Trang chủ</a>. 💰',
+};
+
+function sendQuick(msg) {
+    addMsg(msg, 'user');
+    setTimeout(() => {
+        const reply = botReplies[msg] || 'Cảm ơn bạn! Nhân viên hỗ trợ sẽ liên hệ sớm. Hoặc gọi <strong>0123.456.789</strong> để được hỗ trợ ngay.';
+        addMsg(reply, 'bot');
+    }, 600);
+}
+
+function sendChat() {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+    addMsg(msg, 'user');
+    setTimeout(() => {
+        addMsg('Cảm ơn câu hỏi của bạn! 😊 Nhân viên sẽ phản hồi trong vài phút. Trong lúc đó bạn có thể xem <a href="discover.php" style="color:#28a745;font-weight:700;">trang Khám phá</a> để biết thêm dịch vụ.', 'bot');
+    }, 700);
+}
+
+function addMsg(text, from) {
+    const container = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.style.cssText = `display:flex;align-items:flex-end;gap:.5rem;${from === 'user' ? 'flex-direction:row-reverse;' : ''}`;
+
+    const icon = document.createElement('div');
+    icon.style.cssText = `width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:${from === 'user' ? '#667eea' : '#28a745'};`;
+    icon.innerHTML = `<i class="fas fa-${from === 'user' ? 'user' : 'robot'} text-white" style="font-size:.7rem;"></i>`;
+
+    const bubble = document.createElement('div');
+    bubble.style.cssText = `background:${from === 'user' ? 'linear-gradient(135deg,#667eea,#764ba2)' : '#fff'};color:${from === 'user' ? '#fff' : '#374151'};border-radius:${from === 'user' ? '14px 14px 0 14px' : '14px 14px 14px 0'};padding:.7rem 1rem;max-width:78%;box-shadow:0 2px 8px rgba(0,0,0,.08);font-size:.85rem;`;
+    bubble.innerHTML = text;
+
+    div.appendChild(icon);
+    div.appendChild(bubble);
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
 </script>

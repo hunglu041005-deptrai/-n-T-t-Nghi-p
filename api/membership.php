@@ -73,6 +73,18 @@ if (!$stmt->execute()) {
 $membership_id = $stmt->insert_id;
 $stmt->close();
 
+// Gửi thông báo kích hoạt hội viên
+try {
+    require_once __DIR__ . '/../includes/notification-system.php';
+    $ns = new NotificationSystem();
+    $ns->notifyMembershipActivated(
+        $user_id,
+        $member_code,
+        $plan['name'] . ': ' . $plan['detail'],
+        $end_date
+    );
+} catch (Exception $e) {}
+
 echo json_encode([
     'success'        => true,
     'membership_id'  => $membership_id,

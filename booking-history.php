@@ -207,7 +207,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="info-item">
                 <span class="info-label"><i class="fas fa-map-marker-alt me-1"></i>Sân</span>
                 <span class="info-value"><?php echo escape($b['court_name']); ?></span>
-                <small class="text-muted"><?php echo escape($b['location']); ?></small>
+                <small class="text-muted"><?php echo escape($b['location'] ?? ''); ?></small>
             </div>
             <div class="info-item">
                 <span class="info-label"><i class="fas fa-calendar me-1"></i>Ngày</span>

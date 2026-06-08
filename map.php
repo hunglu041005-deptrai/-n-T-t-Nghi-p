@@ -13,6 +13,12 @@ $filters = [
     'radius' => $_GET['radius'] ?? '3'
 ];
 
+// Params từ "Chỉ đường" trong featured.php
+$target_court_id   = intval($_GET['court_id'] ?? 0);
+$target_court_name = $_GET['name'] ?? '';
+$target_lat        = floatval($_GET['lat'] ?? 0);
+$target_lng        = floatval($_GET['lng'] ?? 0);
+
 $locations = getLocations();
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -191,6 +197,91 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- Map functionality script -->
 <script src="assets/js/map-page.js"></script>
+
+<?php if ($target_court_id && $target_court_name): ?>
+<!-- Auto-highlight sân khi đến từ "Chỉ đường" -->
+<script>
+// Truyền thông tin sân mục tiêu vào window để map-page.js sử dụng
+window.targetCourt = {
+    id:   <?php echo $target_court_id; ?>,
+    name: <?php echo json_encode($target_court_name); ?>,
+    lat:  <?php echo $target_lat ?: 'null'; ?>,
+    lng:  <?php echo $target_lng ?: 'null'; ?>
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const t = window.targetCourt;
+
+    function doHighlight() {
+        // 1. Zoom map đến sân nếu có tọa độ
+        if (t.lat && t.lng && window.courtMapInstance?.map) {
+            window.courtMapInstance.map.setView([t.lat, t.lng], 16);
+            // Tìm marker và mở popup
+            window.courtMapInstance.markers.forEach(m => {
+                if (m.courtData?.id === t.id || m.courtData?.name === t.name) {
+                    m.openPopup();
+                }
+            });
+        }
+
+        // 2. Highlight card trong sidebar
+        document.querySelectorAll('[data-court-id]').forEach(card => {
+            if (parseInt(card.dataset.courtId) === t.id) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                card.style.outline = '3px solid #0d6efd';
+                card.style.borderRadius = '12px';
+                setTimeout(() => card.style.outline = '', 4000);
+            }
+        });
+
+        // 3. Banner thông báo
+        const banner = document.createElement('div');
+        banner.id = 'direction-banner';
+        banner.innerHTML = `
+            <i class="fas fa-location-arrow me-2"></i>
+            Đang chỉ đường đến: <strong>${t.name}</strong>
+            <a href="https://www.google.com/maps/dir/?api=1&destination=${t.lat},${t.lng}"
+               target="_blank"
+               style="color:#fff;margin-left:.8rem;font-weight:700;text-decoration:underline;">
+               Mở Google Maps <i class="fas fa-external-link-alt ms-1"></i>
+            </a>
+            <button onclick="document.getElementById('direction-banner').remove()"
+                    style="background:transparent;border:none;color:#fff;margin-left:.8rem;font-size:1.1rem;cursor:pointer;">✕</button>
+        `;
+        Object.assign(banner.style, {
+            position:    'fixed',
+            top:         '72px',
+            left:        '50%',
+            transform:   'translateX(-50%)',
+            background:  'linear-gradient(135deg,#0d6efd,#0dcaf0)',
+            color:       '#fff',
+            padding:     '.7rem 1.5rem',
+            borderRadius:'50px',
+            fontWeight:  '600',
+            fontSize:    '.88rem',
+            zIndex:      '9999',
+            boxShadow:   '0 8px 25px rgba(13,110,253,.35)',
+            display:     'flex',
+            alignItems:  'center',
+            gap:         '.3rem',
+            whiteSpace:  'nowrap',
+        });
+        document.body.appendChild(banner);
+        setTimeout(() => banner?.remove(), 8000);
+    }
+
+    // Chờ map load xong (map-page.js init async)
+    let tries = 0;
+    const wait = setInterval(() => {
+        tries++;
+        if (window.courtMapInstance || tries > 20) {
+            clearInterval(wait);
+            doHighlight();
+        }
+    }, 300);
+});
+</script>
+<?php endif; ?>
 
 <style>
 .map-container-fullscreen {

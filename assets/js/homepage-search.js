@@ -122,69 +122,36 @@ class HomepageSearch {
             return response.text();
         })
         .then(html => {
-            console.log('AJAX response received, length:', html.length);
-            
-            // Update results directly with the HTML response
+            // Update results
             const resultsContainer = document.getElementById('courtsResults');
             if (resultsContainer) {
                 resultsContainer.innerHTML = html;
-                
-                // Restore scroll position
-                window.scrollTo(0, currentScrollY);
-                
-                // Count results
-                const courtCards = resultsContainer.querySelectorAll('.court-card-modern');
-                const resultCount = courtCards.length;
-                
-                // Show toast message
-                this.showToast(`Tìm thấy ${resultCount} sân phù hợp`, resultCount > 0 ? 'success' : 'warning');
-                
-                console.log(`Search completed: ${resultCount} courts found`);
-            } else {
-                console.error('Could not find courtsResults container');
-                this.showToast('Có lỗi xảy ra khi cập nhật kết quả', 'error');
+
+                // Scroll xuống phần kết quả
+                setTimeout(() => {
+                    resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
             }
         })
         .catch(error => {
             console.error('Search error:', error);
-            this.showToast('Có lỗi xảy ra khi tìm kiếm: ' + error.message, 'error');
-            
-            // Restore scroll position on error too
-            window.scrollTo(0, currentScrollY);
         })
         .finally(() => {
-            // Reset loading state
             this.setLoadingState(false);
             this.isSearching = false;
-            
-            // Ensure scroll position is maintained
-            setTimeout(() => {
-                window.scrollTo(0, currentScrollY);
-            }, 50);
         });
     }
     
     resetSearch() {
-        // Save current scroll position
-        const currentScrollY = window.scrollY;
-        
         // Clear all form inputs
-        document.getElementById('searchInput').value = '';
-        document.getElementById('locationInput').value = '';
-        document.getElementById('priceSelect').value = '';
-        document.getElementById('minPriceInput').value = '';
-        document.getElementById('maxPriceInput').value = '';
-        document.getElementById('sortSelect').value = '';
-        
-        // Perform search with empty filters (show all)
+        const ids = ['searchInput','locationInput','priceSelect','minPriceInput','maxPriceInput','sortSelect'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+
+        // Perform search
         this.performSearch();
-        
-        // Restore scroll position
-        setTimeout(() => {
-            window.scrollTo(0, currentScrollY);
-        }, 100);
-        
-        this.showToast('Đã xóa bộ lọc', 'info');
     }
     
     getFormData() {
@@ -236,34 +203,8 @@ class HomepageSearch {
     }
     
     showToast(message, type = 'info') {
-        // Use existing toast system if available
-        if (typeof showToast === 'function') {
-            showToast(message, type);
-        } else {
-            // Simple fallback toast
-            console.log(`${type.toUpperCase()}: ${message}`);
-            
-            // Create simple toast element
-            const toast = document.createElement('div');
-            toast.className = `alert alert-${this.getBootstrapAlertClass(type)} position-fixed`;
-            toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-            toast.innerHTML = `
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-${this.getToastIcon(type)} me-2"></i>
-                    <span>${message}</span>
-                    <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
-                </div>
-            `;
-            
-            document.body.appendChild(toast);
-            
-            // Auto remove after 3 seconds
-            setTimeout(() => {
-                if (toast.parentElement) {
-                    toast.remove();
-                }
-            }, 3000);
-        }
+        // Toast disabled
+        console.log(`[Search] ${type}: ${message}`);
     }
     
     getBootstrapAlertClass(type) {

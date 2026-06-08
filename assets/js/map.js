@@ -304,8 +304,6 @@ class CourtMap {
             const marker = this.createCourtMarker(court);
             this.markers.push(marker);
         });
-        
-        this.showToast(`Tìm thấy ${filteredCourts.length} sân phù hợp`, 'info');
     }
     
     calculateDistance(lat1, lng1, lat2, lng2) {

@@ -73,7 +73,6 @@ function getCourtById($id) {
     $stmt->close();
     return $court;
 }
-
 function getCourtAvailability($court_id, $date) {
     global $mysqli;
     $sql = 'SELECT start_time, end_time FROM bookings WHERE court_id = ? AND booking_date = ? AND status != "cancelled"';

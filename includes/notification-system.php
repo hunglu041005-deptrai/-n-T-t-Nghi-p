@@ -1,267 +1,215 @@
 <?php
-require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/../db.php';
 
 class NotificationSystem {
     private $mysqli;
-    
+
     public function __construct() {
         global $mysqli;
         $this->mysqli = $mysqli;
     }
-    
-    /**
-     * Create a new notification
-     */
-    public function createNotification($data) {
-        $stmt = $this->mysqli->prepare('
-            INSERT INTO booking_notifications (booking_id, user_id, type, title, message, sent_at) 
-            VALUES (?, ?, ?, ?, ?, NOW())
-        ');
-        
-        $stmt->bind_param('iisss', 
-            $data['booking_id'],
-            $data['user_id'],
-            $data['type'],
-            $data['title'],
-            $data['message']
+
+    // ===== CORE: Tạo thông báo =====
+    public function create(int $userId, string $type, string $title, string $message, ?string $link = null): int|false {
+        $stmt = $this->mysqli->prepare(
+            'INSERT INTO notifications (user_id, type, title, message, link) VALUES (?, ?, ?, ?, ?)'
         );
-        
+        $stmt->bind_param('issss', $userId, $type, $title, $message, $link);
         if ($stmt->execute()) {
-            $notificationId = $this->mysqli->insert_id;
-            
-            // Send real-time notification via WebSocket
-            $this->sendRealTimeNotification($data['user_id'], [
-                'id' => $notificationId,
-                'type' => $data['type'],
-                'title' => $data['title'],
-                'message' => $data['message'],
-                'timestamp' => date('Y-m-d H:i:s')
-            ]);
-            
-            return $notificationId;
+            return $stmt->insert_id;
         }
-        
         return false;
     }
-    
-    /**
-     * Get user notifications
-     */
-    public function getUserNotifications($userId, $limit = 20, $offset = 0) {
-        $stmt = $this->mysqli->prepare('
-            SELECT n.*, b.booking_date, b.start_time, c.name as court_name
-            FROM booking_notifications n
-            LEFT JOIN bookings b ON n.booking_id = b.id
-            LEFT JOIN courts c ON b.court_id = c.id
-            WHERE n.user_id = ?
-            ORDER BY n.sent_at DESC
-            LIMIT ? OFFSET ?
-        ');
-        
+
+    // ===== ĐẶT SÂN =====
+    public function notifyBookingConfirmed(int $bookingId): void {
+        $booking = $this->getBooking($bookingId);
+        if (!$booking) return;
+
+        $date = date('d/m/Y', strtotime($booking['booking_date']));
+        $time = substr($booking['start_time'], 0, 5) . ' – ' . substr($booking['end_time'], 0, 5);
+
+        $this->create(
+            $booking['user_id'],
+            'booking',
+            '✅ Đặt sân thành công!',
+            "Bạn đã đặt {$booking['court_name']} vào ngày {$date}, {$time}. Vui lòng có mặt đúng giờ.",
+            'booking-history.php'
+        );
+    }
+
+    public function notifyBookingReminder(int $bookingId): void {
+        $booking = $this->getBooking($bookingId);
+        if (!$booking) return;
+
+        $time = substr($booking['start_time'], 0, 5);
+        $this->create(
+            $booking['user_id'],
+            'booking',
+            '⏰ Nhắc lịch chơi cầu lông',
+            "Bạn có lịch chơi tại {$booking['court_name']} lúc {$time} hôm nay. Chuẩn bị tốt nhé!",
+            'booking-history.php'
+        );
+    }
+
+    public function notifyBookingCancelled(int $bookingId): void {
+        $booking = $this->getBooking($bookingId);
+        if (!$booking) return;
+
+        $date = date('d/m/Y', strtotime($booking['booking_date']));
+        $this->create(
+            $booking['user_id'],
+            'booking',
+            '❌ Booking đã bị hủy',
+            "Booking sân {$booking['court_name']} ngày {$date} đã bị hủy.",
+            'booking-history.php'
+        );
+    }
+
+    // ===== GÓI HỘI VIÊN =====
+    public function notifyMembershipActivated(int $userId, string $memberCode, string $planName, string $endDate): void {
+        $end = date('d/m/Y', strtotime($endDate));
+        $this->create(
+            $userId,
+            'membership',
+            '🎉 Thẻ hội viên đã được kích hoạt!',
+            "Gói \"{$planName}\" của bạn đã được kích hoạt. Mã thẻ: {$memberCode}. Hạn sử dụng đến {$end}.",
+            'membership.php'
+        );
+    }
+
+    public function notifyMembershipExpiringSoon(int $userId, string $memberCode, int $daysLeft): void {
+        $this->create(
+            $userId,
+            'membership',
+            '⚠️ Thẻ hội viên sắp hết hạn',
+            "Thẻ {$memberCode} của bạn còn {$daysLeft} ngày nữa sẽ hết hạn. Gia hạn ngay để không gián đoạn.",
+            'membership.php'
+        );
+    }
+
+    // ===== ĐĂNG KÝ KHÓA HỌC =====
+    public function notifyTrainingRegistered(int $userId, string $studentCode, string $courseLabel, string $coach): void {
+        $this->create(
+            $userId,
+            'training',
+            '📚 Đăng ký khóa học thành công!',
+            "Bạn đã đăng ký {$courseLabel}. Mã học viên: {$studentCode}. HLV: {$coach}. Đội ngũ sẽ liên hệ xác nhận lịch học.",
+            'training.php'
+        );
+    }
+
+    public function notifyTrainingScheduleUpdated(int $userId, string $courseLabel, string $newSchedule): void {
+        $this->create(
+            $userId,
+            'coach',
+            '📅 Lịch học đã được cập nhật',
+            "Lịch học {$courseLabel} của bạn đã thay đổi: {$newSchedule}.",
+            'training.php'
+        );
+    }
+
+    // ===== KHUYẾN MÃI =====
+    public function notifyPromotion(int $userId, string $title, string $detail, ?string $link = null): void {
+        $this->create($userId, 'promotion', "🎁 {$title}", $detail, $link ?? 'discover.php');
+    }
+
+    public function broadcastPromotion(string $title, string $detail, ?string $link = null): void {
+        $result = $this->mysqli->query('SELECT id FROM users WHERE status = 1');
+        while ($row = $result->fetch_assoc()) {
+            $this->notifyPromotion((int)$row['id'], $title, $detail, $link);
+        }
+    }
+
+    // ===== HLV =====
+    public function notifyCoachMessage(int $userId, string $coachName, string $message): void {
+        $this->create(
+            $userId,
+            'coach',
+            "💬 Tin nhắn từ HLV {$coachName}",
+            $message,
+            'training.php'
+        );
+    }
+
+    // ===== HỆ THỐNG =====
+    public function notifySystem(int $userId, string $title, string $message): void {
+        $this->create($userId, 'system', $title, $message);
+    }
+
+    // ===== QUERY =====
+    public function getUserNotifications(int $userId, int $limit = 20, int $offset = 0): array {
+        $stmt = $this->mysqli->prepare(
+            'SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?'
+        );
         $stmt->bind_param('iii', $userId, $limit, $offset);
         $stmt->execute();
         $result = $stmt->get_result();
-        
-        $notifications = [];
+        $rows = [];
         while ($row = $result->fetch_assoc()) {
-            $notifications[] = $row;
+            $row['sent_at'] = $row['created_at']; // backward compat
+            $rows[] = $row;
         }
-        
-        return $notifications;
+        return $rows;
     }
-    
-    /**
-     * Mark notification as read
-     */
-    public function markAsRead($notificationId, $userId) {
-        $stmt = $this->mysqli->prepare('
-            UPDATE booking_notifications 
-            SET is_read = 1 
-            WHERE id = ? AND user_id = ?
-        ');
-        
-        $stmt->bind_param('ii', $notificationId, $userId);
-        return $stmt->execute();
-    }
-    
-    /**
-     * Mark all notifications as read
-     */
-    public function markAllAsRead($userId) {
-        $stmt = $this->mysqli->prepare('
-            UPDATE booking_notifications 
-            SET is_read = 1 
-            WHERE user_id = ? AND is_read = 0
-        ');
-        
-        $stmt->bind_param('i', $userId);
-        return $stmt->execute();
-    }
-    
-    /**
-     * Get unread notification count
-     */
-    public function getUnreadCount($userId) {
-        $stmt = $this->mysqli->prepare('
-            SELECT COUNT(*) as count 
-            FROM booking_notifications 
-            WHERE user_id = ? AND is_read = 0
-        ');
-        
+
+    public function getUnreadCount(int $userId): int {
+        $stmt = $this->mysqli->prepare(
+            'SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0'
+        );
         $stmt->bind_param('i', $userId);
         $stmt->execute();
-        $result = $stmt->get_result()->fetch_assoc();
-        
-        return $result['count'];
+        return (int) $stmt->get_result()->fetch_row()[0];
     }
-    
-    /**
-     * Send booking confirmation notification
-     */
-    public function sendBookingConfirmation($bookingId) {
-        $booking = $this->getBookingDetails($bookingId);
-        
-        if ($booking) {
-            $this->createNotification([
-                'booking_id' => $bookingId,
-                'user_id' => $booking['user_id'],
-                'type' => 'confirmation',
-                'title' => 'Đặt sân thành công!',
-                'message' => "Bạn đã đặt thành công sân {$booking['court_name']} vào {$booking['booking_date']} lúc {$booking['start_time']}"
-            ]);
-        }
+
+    public function markAsRead(int $notifId, int $userId): bool {
+        $stmt = $this->mysqli->prepare(
+            'UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?'
+        );
+        $stmt->bind_param('ii', $notifId, $userId);
+        return $stmt->execute();
     }
-    
-    /**
-     * Send booking reminder
-     */
-    public function sendBookingReminder($bookingId) {
-        $booking = $this->getBookingDetails($bookingId);
-        
-        if ($booking) {
-            $this->createNotification([
-                'booking_id' => $bookingId,
-                'user_id' => $booking['user_id'],
-                'type' => 'reminder',
-                'title' => 'Nhắc nhở: Sắp đến giờ chơi!',
-                'message' => "Bạn có lịch chơi tại {$booking['court_name']} vào {$booking['start_time']} hôm nay"
-            ]);
-        }
+
+    public function markAllAsRead(int $userId): bool {
+        $stmt = $this->mysqli->prepare(
+            'UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0'
+        );
+        $stmt->bind_param('i', $userId);
+        return $stmt->execute();
     }
-    
-    /**
-     * Send cancellation notification
-     */
-    public function sendCancellationNotification($bookingId) {
-        $booking = $this->getBookingDetails($bookingId);
-        
-        if ($booking) {
-            $this->createNotification([
-                'booking_id' => $bookingId,
-                'user_id' => $booking['user_id'],
-                'type' => 'cancellation',
-                'title' => 'Booking đã được hủy',
-                'message' => "Booking sân {$booking['court_name']} vào {$booking['booking_date']} đã được hủy thành công"
-            ]);
-        }
-    }
-    
-    /**
-     * Send real-time notification via WebSocket
-     */
-    private function sendRealTimeNotification($userId, $data) {
-        // This would integrate with a WebSocket server (like Socket.IO, Pusher, etc.)
-        // For now, we'll store it for polling-based updates
-        
-        $cacheFile = __DIR__ . "/../cache/notifications_user_{$userId}.json";
-        
-        // Ensure cache directory exists
-        $cacheDir = dirname($cacheFile);
-        if (!is_dir($cacheDir)) {
-            mkdir($cacheDir, 0755, true);
-        }
-        
-        // Load existing notifications
-        $notifications = [];
-        if (file_exists($cacheFile)) {
-            $notifications = json_decode(file_get_contents($cacheFile), true) ?: [];
-        }
-        
-        // Add new notification
-        array_unshift($notifications, $data);
-        
-        // Keep only last 50 notifications
-        $notifications = array_slice($notifications, 0, 50);
-        
-        // Save to cache
-        file_put_contents($cacheFile, json_encode($notifications));
-    }
-    
-    /**
-     * Get real-time notifications for polling
-     */
-    public function getRealTimeNotifications($userId, $lastTimestamp = null) {
-        $cacheFile = __DIR__ . "/../cache/notifications_user_{$userId}.json";
-        
-        if (!file_exists($cacheFile)) {
-            return [];
-        }
-        
-        $notifications = json_decode(file_get_contents($cacheFile), true) ?: [];
-        
+
+    public function getRealTimeNotifications(int $userId, ?string $lastTimestamp = null): array {
+        $sql = 'SELECT * FROM notifications WHERE user_id = ?';
+        $params = [$userId];
+        $types  = 'i';
         if ($lastTimestamp) {
-            $notifications = array_filter($notifications, function($notification) use ($lastTimestamp) {
-                return strtotime($notification['timestamp']) > strtotime($lastTimestamp);
-            });
+            $sql   .= ' AND created_at > ?';
+            $params[] = $lastTimestamp;
+            $types  .= 's';
         }
-        
-        return array_values($notifications);
-    }
-    
-    /**
-     * Schedule booking reminders
-     */
-    public function scheduleReminders() {
-        // Get bookings that need reminders (2 hours before start time)
-        $stmt = $this->mysqli->prepare('
-            SELECT b.*, c.name as court_name
-            FROM bookings b
-            JOIN courts c ON b.court_id = c.id
-            WHERE b.booking_date = CURDATE()
-            AND TIMESTAMPDIFF(MINUTE, NOW(), CONCAT(b.booking_date, " ", b.start_time)) BETWEEN 115 AND 125
-            AND b.status = "confirmed"
-            AND NOT EXISTS (
-                SELECT 1 FROM booking_notifications 
-                WHERE booking_id = b.id AND type = "reminder"
-            )
-        ');
-        
+        $sql .= ' ORDER BY created_at DESC LIMIT 5';
+        $stmt = $this->mysqli->prepare($sql);
+        $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $result = $stmt->get_result();
-        
-        while ($booking = $result->fetch_assoc()) {
-            $this->sendBookingReminder($booking['id']);
+        $rows = [];
+        while ($row = $result->fetch_assoc()) {
+            $row['sent_at'] = $row['created_at'];
+            $rows[] = $row;
         }
+        return $rows;
     }
-    
-    private function getBookingDetails($bookingId) {
-        $stmt = $this->mysqli->prepare('
-            SELECT b.*, c.name as court_name, u.name as user_name
-            FROM bookings b
-            JOIN courts c ON b.court_id = c.id
-            JOIN users u ON b.user_id = u.id
-            WHERE b.id = ?
-        ');
-        
+
+    // ===== PRIVATE HELPERS =====
+    private function getBooking(int $bookingId): ?array {
+        $stmt = $this->mysqli->prepare(
+            'SELECT b.*, c.name as court_name
+             FROM bookings b JOIN courts c ON b.court_id = c.id
+             WHERE b.id = ?'
+        );
         $stmt->bind_param('i', $bookingId);
         $stmt->execute();
-        return $stmt->get_result()->fetch_assoc();
+        $row = $stmt->get_result()->fetch_assoc();
+        return $row ?: null;
     }
 }
-
-// Cron job function to send scheduled reminders
-function sendScheduledReminders() {
-    $notificationSystem = new NotificationSystem();
-    $notificationSystem->scheduleReminders();
-}
-?>

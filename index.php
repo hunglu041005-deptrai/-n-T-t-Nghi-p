@@ -15,495 +15,651 @@ $filters = [
 $courts = getCourts($filters);
 $locations = getLocations();
 
-// Handle AJAX requests - return only court results
+// Handle AJAX requests
 if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
     header('Content-Type: text/html; charset=utf-8');
-    // Return only the court results HTML
     if (empty($courts)) {
         echo '<div class="col-12">
-            <div class="no-results text-center py-5">
-                <div class="mb-4">
-                    <i class="fas fa-search fa-4x text-muted opacity-50"></i>
-                </div>
-                <h4 class="text-muted mb-3">Không tìm thấy sân phù hợp</h4>
-                <p class="text-muted mb-4">Hãy thử điều chỉnh bộ lọc hoặc tìm kiếm với từ khóa khác</p>
-                <button type="button" onclick="homepageSearch.resetSearch()" class="btn btn-primary">
-                    <i class="fas fa-refresh me-2"></i>Xem tất cả sân
+            <div class="text-center py-5">
+                <i class="fas fa-search fa-3x text-muted opacity-50 mb-3 d-block"></i>
+                <h5 class="text-muted">Không tìm thấy sân phù hợp</h5>
+                <p class="text-muted small">Hãy thử điều chỉnh bộ lọc</p>
+                <button onclick="homepageSearch.resetSearch()" class="btn btn-primary btn-sm">
+                    Xem tất cả sân
                 </button>
             </div>
         </div>';
     }
-    
     foreach ($courts as $court) {
+        $phone = $court['phone'] ?? '0968073500';
         echo '<div class="col-md-6 col-lg-4">
-            <div class="court-card-modern h-100 bg-white rounded-3 shadow-sm border-0 overflow-hidden">
-                <div class="court-image-container position-relative">
-                    <img src="' . escape($court['cover_image']) . '" 
-                         class="court-image w-100" alt="' . escape($court['name']) . '">
-                    <div class="court-status">
-                        <span class="badge bg-success">Còn trống</span>
-                    </div>
+            <div class="court-card-v2">
+                <div class="court-img-wrap">
+                    <img src="' . escape($court['cover_image']) . '" alt="' . escape($court['name']) . '">
+                    <span class="court-badge-status">Còn trống</span>
+                    <span class="court-badge-price">' . number_format($court['price_per_hour']) . 'đ/h</span>
                 </div>
-                
-                <div class="card-body p-4">
-                    <h5 class="court-name fw-bold mb-2 text-dark">' . escape($court['name']) . '</h5>
-                    
-                    <div class="court-info mb-3">
-                        <div class="info-item d-flex align-items-center mb-2">
-                            <i class="fas fa-map-marker-alt text-muted me-2"></i>
-                            <span class="text-muted small">' . escape($court['location']) . '</span>
-                        </div>
-                        <div class="info-item d-flex align-items-center">
-                            <i class="fas fa-money-bill text-muted me-2"></i>
-                            <span class="price fw-bold text-success">
-                                ' . number_format($court['price_per_hour']) . 'đ/giờ
-                            </span>
-                        </div>
+                <div class="court-body">
+                    <h5 class="court-title">' . escape($court['name']) . '</h5>
+                    <div class="court-meta">
+                        <span><i class="fas fa-map-marker-alt"></i>' . escape($court['location']) . '</span>
+                        <span><i class="fas fa-clock"></i>6:00–22:00</span>
                     </div>
-                    
-                    <p class="court-description text-muted small mb-3 lh-sm">
-                        ' . escape(substr($court['description'], 0, 80)) . '...
-                    </p>
-                    
-                    <div class="court-features mb-3">
-                        <div class="d-flex gap-1 flex-wrap">
-                            <span class="badge bg-light text-dark small">Có mái che</span>
-                            <span class="badge bg-light text-dark small">Sân gỗ</span>
-                            <span class="badge bg-light text-dark small">Điều hòa</span>
-                        </div>
+                    <div class="court-tags">
+                        <span>Mái che</span><span>Sân gỗ</span><span>Điều hòa</span>
                     </div>
-                    
-                    <div class="court-actions d-flex gap-2">
-                        <a href="booking-online.php?court_id=' . $court['id'] . '" 
-                           class="btn btn-primary btn-sm w-100">
-                            <i class="fas fa-calendar-plus me-1"></i>Đặt sân
+                    <div class="court-footer">
+                        <a href="booking-online.php?court_id=' . $court['id'] . '" class="btn-book">
+                            <i class="fas fa-calendar-check me-1"></i>Đặt sân
+                        </a>
+                        <a href="tel:' . $phone . '" class="btn-call" title="Gọi ngay">
+                            <i class="fas fa-phone"></i>
+                        </a>
+                        <a href="map.php?court_id=' . $court['id'] . '&name=' . urlencode($court['name']) . '&lat=' . ($court['latitude'] ?? '21.0285') . '&lng=' . ($court['longitude'] ?? '105.8542') . '" class="btn-map" title="Chỉ đường">
+                            <i class="fas fa-map-marker-alt"></i>
                         </a>
                     </div>
                 </div>
             </div>
         </div>';
     }
-    exit; // Stop execution for AJAX requests
+    exit;
 }
 
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<section class="features-section py-5 bg-light">
-    <div class="container">
-        <div class="row mb-4">
-            <div class="col-12 text-center">
-                <h2 class="h4 fw-bold text-dark mb-2">Tại sao chọn chúng tôi?</h2>
-                <p class="text-muted">Trải nghiệm đặt sân cầu lông tuyệt vời nhất</p>
+<style>
+/* ===== HERO SECTION ===== */
+.hero-section {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    padding: 5rem 0 6rem;
+    position: relative;
+    overflow: hidden;
+}
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: -100px; right: -100px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(102,126,234,.15) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.hero-section::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: -80px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(40,167,69,.1) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.hero-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(102,126,234,.2); border: 1px solid rgba(102,126,234,.4);
+    color: #a5b4fc; padding: 5px 14px; border-radius: 50px;
+    font-size: .8rem; font-weight: 600; margin-bottom: 1.5rem;
+}
+.hero-title {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 900; color: #fff; line-height: 1.15; margin-bottom: 1rem;
+}
+.hero-title .gradient-text {
+    background: linear-gradient(135deg, #667eea, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.hero-desc { color: rgba(255,255,255,.65); font-size: 1.05rem; margin-bottom: 2rem; max-width: 480px; }
+.hero-stats { display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
+.hero-stat .n { font-size: 1.8rem; font-weight: 900; color: #a5b4fc; }
+.hero-stat .l { font-size: .72rem; color: rgba(255,255,255,.5); }
+.btn-hero-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff; border: none; border-radius: 14px;
+    padding: .85rem 2rem; font-weight: 700; font-size: 1rem;
+    box-shadow: 0 8px 25px rgba(102,126,234,.4);
+    transition: all .2s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-hero-primary:hover { transform: translateY(-2px); color: #fff; box-shadow: 0 12px 35px rgba(102,126,234,.5); }
+.btn-hero-secondary {
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+    color: #fff; border-radius: 14px;
+    padding: .85rem 2rem; font-weight: 600; font-size: 1rem;
+    transition: all .2s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-hero-secondary:hover { background: rgba(255,255,255,.18); color: #fff; }
+
+/* ===== SEARCH BAR ===== */
+.search-floating {
+    background: #fff;
+    border-radius: 16px;
+    padding: 1.5rem;
+    box-shadow: 0 8px 30px rgba(0,0,0,.12);
+    margin-top: 2rem;
+    position: relative; z-index: 2;
+    border: 1px solid rgba(255,255,255,.3);
+}
+.search-input-modern {
+    border: 1px solid #dee2e6 !important;
+    border-radius: 6px !important;
+    padding: .375rem .75rem !important;
+    font-size: .9rem !important;
+    color: #212529 !important;
+    background: #fff !important;
+    transition: border-color .15s, box-shadow .15s !important;
+    line-height: 1.5 !important;
+}
+.search-input-modern:focus {
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 .25rem rgba(13,110,253,.25) !important;
+    outline: 0 !important;
+}
+.search-input-modern::placeholder { color: #6c757d !important; opacity: 1 !important; }
+.btn-search-main {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none; border-radius: 6px;
+    color: #fff; font-weight: 600; padding: .375rem 1.5rem;
+    font-size: .9rem; line-height: 1.5;
+    transition: all .2s; white-space: nowrap;
+    display: inline-flex; align-items: center;
+}
+.btn-search-main:hover { color: #fff; opacity: .9; }
+
+/* Labels search */
+.search-floating .form-label { font-size: .82rem; margin-bottom: .3rem; color: #495057; }
+.search-floating .form-select { 
+    border: 1px solid #dee2e6 !important; 
+    border-radius: 6px !important; 
+    font-size: .9rem !important;
+    color: #212529 !important;
+}
+.search-floating .form-select:focus {
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 .25rem rgba(13,110,253,.25) !important;
+}
+.search-floating .border-top { border-color: #dee2e6 !important; }
+.search-floating .btn-outline-secondary {
+    border-radius: 6px !important;
+    font-size: .9rem !important;
+}
+
+/* ===== COURT CARDS V2 ===== */
+.court-card-v2 {
+    background: #fff;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,.07);
+    transition: all .3s cubic-bezier(.4,0,.2,1);
+    border: 1px solid #f0f0f0;
+    height: 100%;
+}
+.court-card-v2:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 40px rgba(0,0,0,.14);
+    border-color: #667eea;
+}
+.court-img-wrap {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+.court-img-wrap img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transition: transform .4s ease;
+}
+.court-card-v2:hover .court-img-wrap img { transform: scale(1.06); }
+.court-badge-status {
+    position: absolute; top: 12px; left: 12px;
+    background: #28a745; color: #fff;
+    font-size: .72rem; font-weight: 700;
+    padding: 3px 10px; border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(40,167,69,.3);
+}
+.court-badge-price {
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(0,0,0,.6); color: #fff;
+    font-size: .78rem; font-weight: 700;
+    padding: 3px 10px; border-radius: 20px;
+    backdrop-filter: blur(4px);
+}
+.court-body { padding: 1.2rem 1.3rem 1.3rem; }
+.court-title {
+    font-size: 1rem; font-weight: 800; color: #111827;
+    margin-bottom: .6rem; line-height: 1.3;
+}
+.court-meta {
+    display: flex; flex-direction: column; gap: 3px;
+    margin-bottom: .8rem;
+}
+.court-meta span {
+    font-size: .8rem; color: #6b7280;
+    display: flex; align-items: center; gap: 5px;
+}
+.court-meta i { color: #9ca3af; width: 14px; }
+.court-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 1rem; }
+.court-tags span {
+    background: #f3f4f6; color: #374151;
+    font-size: .72rem; font-weight: 600;
+    padding: 3px 8px; border-radius: 6px;
+}
+.court-footer {
+    display: flex; gap: .5rem; align-items: center;
+    padding-top: .8rem;
+    border-top: 1px solid #f3f4f6;
+}
+.btn-book {
+    flex: 1;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff; border: none; border-radius: 10px;
+    padding: .55rem 1rem; font-weight: 700; font-size: .85rem;
+    text-decoration: none; display: flex; align-items: center;
+    justify-content: center; gap: 5px; transition: all .2s;
+}
+.btn-book:hover { color: #fff; opacity: .9; transform: translateY(-1px); }
+.btn-call, .btn-map {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .85rem; text-decoration: none; transition: all .2s; flex-shrink: 0;
+}
+.btn-call { background: #d1fae5; color: #059669; }
+.btn-call:hover { background: #059669; color: #fff; }
+.btn-map { background: #dbeafe; color: #2563eb; }
+.btn-map:hover { background: #2563eb; color: #fff; }
+
+/* ===== FEATURES ===== */
+.features-section { background: #f8fafc; padding: 4.5rem 0; }
+.feature-card-v2 {
+    background: #fff;
+    border-radius: 18px;
+    padding: 1.8rem;
+    height: 100%;
+    border: 1px solid #f0f0f0;
+    box-shadow: 0 2px 12px rgba(0,0,0,.05);
+    transition: all .3s ease;
+}
+.feature-card-v2:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 35px rgba(0,0,0,.1);
+    border-color: #e0e7ff;
+}
+.feature-icon-v2 {
+    width: 56px; height: 56px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; margin-bottom: 1.2rem;
+}
+
+/* ===== SECTION HEADERS ===== */
+.section-eyebrow {
+    font-size: .75rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.5px; margin-bottom: .5rem;
+}
+.section-heading {
+    font-size: 1.9rem; font-weight: 900; color: #111827; margin-bottom: .5rem;
+}
+.section-sub { color: #6b7280; font-size: .95rem; }
+
+/* Wave divider */
+.wave-hero { background: #1a1a2e; line-height: 0; }
+.wave-hero svg { display: block; width: 100%; }
+</style>
+
+<!-- HERO SECTION -->
+<div class="hero-section">
+    <div class="container position-relative" style="z-index:2;">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <div class="hero-tag">
+                    <i class="fas fa-shuttlecock"></i>
+                    Nền tảng đặt sân #1 Hà Nội
+                </div>
+                <h1 class="hero-title">
+                    Tìm sân &<br>
+                    <span class="gradient-text">Đặt ngay</span> dễ dàng
+                </h1>
+                <p class="hero-desc">
+                    Hơn 50+ sân cầu lông chất lượng, đặt sân 24/7 online, thanh toán an toàn qua MoMo & VNPay.
+                </p>
+                <div class="hero-stats">
+                    <div class="hero-stat"><span class="n">50+</span><span class="l">Sân cầu lông</span></div>
+                    <div class="hero-stat"><span class="n">5K+</span><span class="l">Lượt đặt</span></div>
+                    <div class="hero-stat"><span class="n">4.8★</span><span class="l">Đánh giá</span></div>
+                </div>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="#search" class="btn-hero-primary">
+                        <i class="fas fa-search"></i> Tìm sân ngay
+                    </a>
+                    <a href="map.php" class="btn-hero-secondary">
+                        <i class="fas fa-map"></i> Xem bản đồ
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6 d-none d-lg-block text-center">
+                <!-- Floating court preview -->
+                <div style="position:relative;display:inline-block;">
+                    <div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:24px;padding:1.5rem;backdrop-filter:blur(10px);">
+                        <div class="d-flex gap-3 mb-3">
+                            <?php foreach (array_slice($courts, 0, 2) as $c): ?>
+                            <div style="flex:1;background:rgba(255,255,255,.1);border-radius:14px;overflow:hidden;">
+                                <img src="<?php echo escape($c['cover_image']); ?>" style="width:100%;height:100px;object-fit:cover;" alt="">
+                                <div style="padding:.5rem .7rem;">
+                                    <div style="color:#fff;font-weight:700;font-size:.8rem;"><?php echo escape($c['name']); ?></div>
+                                    <div style="color:#a5b4fc;font-size:.72rem;"><?php echo number_format($c['price_per_hour']); ?>đ/h</div>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div style="background:rgba(102,126,234,.3);border-radius:12px;padding:.8rem;text-align:center;color:#fff;font-size:.85rem;font-weight:700;">
+                            <i class="fas fa-calendar-check me-2 text-success"></i>
+                            <?php echo count($courts); ?> sân đang trống hôm nay
+                        </div>
+                    </div>
+                    <!-- Floating badges -->
+                    <div style="position:absolute;top:-15px;right:-15px;background:linear-gradient(135deg,#28a745,#20c997);color:#fff;border-radius:12px;padding:.5rem .9rem;font-size:.78rem;font-weight:700;box-shadow:0 4px 15px rgba(40,167,69,.4);">
+                        <i class="fas fa-bolt me-1"></i>Đặt ngay
+                    </div>
+                    <div style="position:absolute;bottom:-15px;left:-15px;background:#fff;border-radius:12px;padding:.5rem .9rem;font-size:.78rem;font-weight:700;color:#374151;box-shadow:0 4px 15px rgba(0,0,0,.15);">
+                        <i class="fas fa-star text-warning me-1"></i>4.8 · 5K+ đánh giá
+                    </div>
+                </div>
             </div>
         </div>
-        
+
+        <!-- Search bar floating -->
+        <div class="search-floating" id="search">
+            <form id="searchForm">
+                <!-- Row 1: Tìm kiếm, Khu vực, Mức giá -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark" style="font-size:.82rem;">
+                            <i class="fas fa-search text-primary me-1"></i>Tìm kiếm
+                        </label>
+                        <input type="search" name="q" class="form-control search-input-modern" id="searchInput"
+                               value="<?php echo escape($filters['q']); ?>"
+                               placeholder="Tên sân, phường/xã...">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark" style="font-size:.82rem;">
+                            <i class="fas fa-map-marker-alt text-success me-1"></i>Khu vực
+                        </label>
+                        <input list="locationList" type="text" name="location" class="form-control search-input-modern" id="locationInput"
+                               value="<?php echo escape($filters['location']); ?>"
+                               placeholder="Chọn phường/xã...">
+                        <datalist id="locationList">
+                            <?php foreach ($locations as $loc): ?>
+                                <option value="<?php echo escape($loc); ?>"></option>
+                            <?php endforeach; ?>
+                        </datalist>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark" style="font-size:.82rem;">
+                            <i class="fas fa-money-bill text-warning me-1"></i>Mức giá
+                        </label>
+                        <select name="price" class="form-select search-input-modern" id="priceSelect">
+                            <option value="">Tất cả mức giá</option>
+                            <option value="low" <?php echo $filters['price']==='low'?'selected':''; ?>>Dưới 100k/giờ</option>
+                            <option value="mid" <?php echo $filters['price']==='mid'?'selected':''; ?>>100k – 150k/giờ</option>
+                            <option value="high" <?php echo $filters['price']==='high'?'selected':''; ?>>Trên 150k/giờ</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Row 2: Giá min, Giá max, Sắp xếp, Reset, Buttons -->
+                <div class="row g-3 align-items-end border-top pt-3">
+                    <div class="col-md-2">
+                        <label class="form-label text-muted" style="font-size:.82rem;">Giá tối thiểu</label>
+                        <input type="number" name="min_price" min="0" class="form-control search-input-modern" id="minPriceInput"
+                               value="<?php echo escape($filters['min_price']); ?>"
+                               placeholder="VD: 80000">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-muted" style="font-size:.82rem;">Giá tối đa</label>
+                        <input type="number" name="max_price" min="0" class="form-control search-input-modern" id="maxPriceInput"
+                               value="<?php echo escape($filters['max_price']); ?>"
+                               placeholder="VD: 200000">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-muted" style="font-size:.82rem;">Sắp xếp theo</label>
+                        <select name="sort" class="form-select search-input-modern" id="sortSelect">
+                            <option value="">Mặc định</option>
+                            <option value="price_asc" <?php echo $filters['sort']==='price_asc'?'selected':''; ?>>Giá thấp → cao</option>
+                            <option value="price_desc" <?php echo $filters['sort']==='price_desc'?'selected':''; ?>>Giá cao → thấp</option>
+                            <option value="newest" <?php echo $filters['sort']==='newest'?'selected':''; ?>>Mới nhất</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" id="resetBtn" class="btn btn-outline-secondary w-100" onclick="window.homepageSearch && window.homepageSearch.resetSearch()">
+                            <i class="fas fa-times me-1"></i>Xóa bộ lọc
+                        </button>
+                    </div>
+                    <div class="col-md-3 d-flex gap-2">
+                        <button type="submit" id="searchBtn" class="btn-search-main flex-grow-1">
+                            <i class="fas fa-search me-2"></i>Tìm sân
+                        </button>
+                        <a href="map.php" class="btn btn-outline-primary d-flex align-items-center gap-1 px-3" style="white-space:nowrap;">
+                            <i class="fas fa-map me-1"></i>Xem bản đồ
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="wave-hero">
+    <svg viewBox="0 0 1440 50" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,25 C360,50 1080,0 1440,25 L1440,50 L0,50 Z" fill="#f8fafc"/>
+    </svg>
+</div>
+
+<!-- FEATURES SECTION -->
+<section class="features-section">
+    <div class="container">
+        <div class="text-center mb-5">
+            <div class="section-eyebrow text-primary">Tại sao chọn chúng tôi</div>
+            <h2 class="section-heading">Trải nghiệm đặt sân tuyệt vời nhất</h2>
+        </div>
         <div class="row g-4">
             <div class="col-md-6 col-lg-3">
-                <div class="feature-card-modern text-center p-4 h-100 bg-white rounded-3 shadow-sm border-0">
-                    <div class="feature-icon-modern mb-3">
-                        <div class="icon-wrapper bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center">
-                            <i class="fas fa-bolt text-primary fa-2x"></i>
-                        </div>
+                <div class="feature-card-v2">
+                    <div class="feature-icon-v2" style="background:#eff6ff;color:#3b82f6;">
+                        <i class="fas fa-bolt"></i>
                     </div>
-                    <h5 class="fw-bold mb-3 text-dark">Đặt nhanh</h5>
-                    <p class="text-muted mb-3">Chỉ <span class="text-primary fw-bold">3 bước</span> để hoàn tất đặt sân trong vòng <span class="text-primary fw-bold">2 phút</span>.</p>
-                    <div class="feature-process">
-                        <small class="text-primary fw-bold">
-                            <i class="fas fa-search me-1"></i>Tìm → 
-                            <i class="fas fa-clock me-1"></i>Chọn giờ → 
-                            <i class="fas fa-credit-card me-1"></i>Thanh toán
-                        </small>
-                    </div>
+                    <h5 class="fw-bold mb-2">Đặt nhanh</h5>
+                    <p class="text-muted small mb-2">Chỉ 3 bước để hoàn tất đặt sân trong vòng 2 phút.</p>
+                    <small style="color:#3b82f6;font-weight:700;">Tìm → Chọn giờ → Thanh toán</small>
                 </div>
             </div>
-            
             <div class="col-md-6 col-lg-3">
-                <div class="feature-card-modern text-center p-4 h-100 bg-white rounded-3 shadow-sm border-0">
-                    <div class="feature-icon-modern mb-3">
-                        <div class="icon-wrapper bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center">
-                            <i class="fas fa-map-marked-alt text-success fa-2x"></i>
-                        </div>
+                <div class="feature-card-v2">
+                    <div class="feature-icon-v2" style="background:#f0fdf4;color:#22c55e;">
+                        <i class="fas fa-map-marked-alt"></i>
                     </div>
-                    <h5 class="fw-bold mb-3 text-dark">Đa dạng sân</h5>
-                    <p class="text-muted mb-3">Hơn <span class="text-success fw-bold">50+ sân</span> chất lượng cao tại <span class="text-success fw-bold">8 quận/huyện</span> Hà Nội.</p>
-                    <div class="feature-process">
-                        <small class="text-success fw-bold">
-                            <i class="fas fa-check-circle me-1"></i>Sân mới, hiện đại, có mái che
-                        </small>
-                    </div>
+                    <h5 class="fw-bold mb-2">50+ Sân</h5>
+                    <p class="text-muted small mb-2">Sân chất lượng cao tại 8 quận/huyện Hà Nội.</p>
+                    <small style="color:#22c55e;font-weight:700;">Sân mới, hiện đại, có mái che</small>
                 </div>
             </div>
-            
             <div class="col-md-6 col-lg-3">
-                <div class="feature-card-modern text-center p-4 h-100 bg-white rounded-3 shadow-sm border-0">
-                    <div class="feature-icon-modern mb-3">
-                        <div class="icon-wrapper bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center">
-                            <i class="fas fa-calendar-check text-info fa-2x"></i>
-                        </div>
+                <div class="feature-card-v2">
+                    <div class="feature-icon-v2" style="background:#ecfdf5;color:#10b981;">
+                        <i class="fas fa-calendar-check"></i>
                     </div>
-                    <h5 class="fw-bold mb-3 text-dark">Lịch rõ ràng</h5>
-                    <p class="text-muted mb-3">Xem <span class="text-info fw-bold">lịch trống 24/7</span> theo giờ và tránh <span class="text-info fw-bold">chồng lịch 100%</span>.</p>
-                    <div class="feature-process">
-                        <small class="text-info fw-bold">
-                            <i class="fas fa-sync-alt me-1"></i>Cập nhật thời gian thực
-                        </small>
-                    </div>
+                    <h5 class="fw-bold mb-2">Lịch rõ ràng</h5>
+                    <p class="text-muted small mb-2">Xem lịch trống 24/7, tránh chồng lịch 100%.</p>
+                    <small style="color:#10b981;font-weight:700;">Cập nhật thời gian thực</small>
                 </div>
             </div>
-            
             <div class="col-md-6 col-lg-3">
-                <div class="feature-card-modern text-center p-4 h-100 bg-white rounded-3 shadow-sm border-0">
-                    <div class="feature-icon-modern mb-3">
-                        <div class="icon-wrapper bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center">
-                            <i class="fas fa-credit-card text-warning fa-2x"></i>
-                        </div>
+                <div class="feature-card-v2">
+                    <div class="feature-icon-v2" style="background:#fffbeb;color:#f59e0b;">
+                        <i class="fas fa-credit-card"></i>
                     </div>
-                    <h5 class="fw-bold mb-3 text-dark">Thanh toán linh hoạt</h5>
-                    <p class="text-muted mb-3">Thanh toán <span class="text-warning fw-bold">online ngay</span> qua MoMo/VNPay hoặc <span class="text-warning fw-bold">trả tại chỗ</span>.</p>
-                    <div class="feature-process">
-                        <small class="text-warning fw-bold">
-                            <i class="fas fa-shield-alt me-1"></i>An toàn, bảo mật 100%
-                        </small>
-                    </div>
+                    <h5 class="fw-bold mb-2">Thanh toán linh hoạt</h5>
+                    <p class="text-muted small mb-2">MoMo, VNPay hoặc tiền mặt tại sân.</p>
+                    <small style="color:#f59e0b;font-weight:700;">An toàn, bảo mật 100%</small>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<section class="search-section py-5" id="search">
+<!-- COURT RESULTS -->
+<section style="background:#fff;padding:3.5rem 0;">
     <div class="container">
-        <div class="row mb-4">
-            <div class="col-12 text-center">
-                <h2 class="h4 fw-bold text-dark mb-2">Tìm sân cầu lông</h2>
-                <p class="text-muted">Sử dụng bộ lọc để tìm sân phù hợp với bạn</p>
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div>
+                <div class="section-eyebrow text-primary">Danh sách sân</div>
+                <h2 class="section-heading mb-0">Tìm sân cầu lông</h2>
+            </div>
+            <div class="d-flex gap-2">
+                <button id="resetBtn" class="btn btn-outline-secondary btn-sm rounded-pill">
+                    <i class="fas fa-times me-1"></i>Xóa lọc
+                </button>
+                <a href="map.php" class="btn btn-outline-primary btn-sm rounded-pill">
+                    <i class="fas fa-map me-1"></i>Bản đồ
+                </a>
             </div>
         </div>
-        
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                <div class="search-card bg-white rounded-3 shadow-sm border p-4">
-                    <form id="searchForm">
-                        <!-- Quick Search Row -->
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold text-dark">
-                                    <i class="fas fa-search text-primary me-2"></i>Tìm kiếm
-                                </label>
-                                <input type="search" name="q" class="form-control" id="searchInput"
-                                       value="<?php echo escape($filters['q']); ?>" 
-                                       placeholder="Tên sân, phường/xã...">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold text-dark">
-                                    <i class="fas fa-map-marker-alt text-success me-2"></i>Khu vực
-                                </label>
-                                <input list="locationList" type="text" name="location" class="form-control" id="locationInput"
-                                       value="<?php echo escape($filters['location']); ?>" 
-                                       placeholder="Chọn phường/xã...">
-                                <datalist id="locationList">
-                                    <?php foreach ($locations as $location): ?>
-                                        <option value="<?php echo escape($location); ?>"></option>
-                                    <?php endforeach; ?>
-                                </datalist>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold text-dark">
-                                    <i class="fas fa-money-bill text-warning me-2"></i>Mức giá
-                                </label>
-                                <select name="price" class="form-select" id="priceSelect">
-                                    <option value="">Tất cả mức giá</option>
-                                    <option value="low" <?php echo $filters['price'] === 'low' ? 'selected' : ''; ?>>Dưới 100k/giờ</option>
-                                    <option value="mid" <?php echo $filters['price'] === 'mid' ? 'selected' : ''; ?>>100k - 150k/giờ</option>
-                                    <option value="high" <?php echo $filters['price'] === 'high' ? 'selected' : ''; ?>>Trên 150k/giờ</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <!-- Advanced Filters -->
-                        <div class="advanced-filters border-top pt-3">
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-3">
-                                    <label class="form-label text-muted">Giá tối thiểu</label>
-                                    <input type="number" name="min_price" min="0" class="form-control" id="minPriceInput"
-                                           value="<?php echo escape($filters['min_price']); ?>" 
-                                           placeholder="VD: 80000">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label text-muted">Giá tối đa</label>
-                                    <input type="number" name="max_price" min="0" class="form-control" id="maxPriceInput"
-                                           value="<?php echo escape($filters['max_price']); ?>" 
-                                           placeholder="VD: 200000">
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="form-label text-muted">Sắp xếp theo</label>
-                                    <select name="sort" class="form-select" id="sortSelect">
-                                        <option value="">Mặc định</option>
-                                        <option value="price_asc" <?php echo $filters['sort'] === 'price_asc' ? 'selected' : ''; ?>>Giá thấp → cao</option>
-                                        <option value="price_desc" <?php echo $filters['sort'] === 'price_desc' ? 'selected' : ''; ?>>Giá cao → thấp</option>
-                                        <option value="newest" <?php echo $filters['sort'] === 'newest' ? 'selected' : ''; ?>>Mới nhất</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-3 d-flex align-items-end">
-                                    <button type="button" id="resetBtn" class="btn btn-outline-secondary w-100">
-                                        <i class="fas fa-times me-2"></i>Xóa bộ lọc
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Search Actions -->
-                        <div class="text-center">
-                            <button type="submit" id="searchBtn" class="btn btn-primary btn-lg px-5 rounded-pill">
-                                <i class="fas fa-search me-2"></i>Tìm sân
-                            </button>
-                            <a href="map.php" class="btn btn-outline-primary btn-lg px-4 rounded-pill ms-2">
-                                <i class="fas fa-map me-2"></i>Xem bản đồ
-                            </a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-    <!-- Court Results -->
-    <div class="container py-4">
+
         <div id="courtsResults" class="row g-4">
             <?php if (empty($courts)): ?>
                 <div class="col-12">
-                    <div class="no-results text-center py-5">
-                        <div class="mb-4">
-                            <i class="fas fa-search fa-4x text-muted opacity-50"></i>
-                        </div>
-                        <h4 class="text-muted mb-3">Không tìm thấy sân phù hợp</h4>
-                        <p class="text-muted mb-4">Hãy thử điều chỉnh bộ lọc hoặc tìm kiếm với từ khóa khác</p>
-                        <a href="index.php" class="btn btn-primary">
-                            <i class="fas fa-refresh me-2"></i>Xem tất cả sân
-                        </a>
+                    <div class="text-center py-5">
+                        <i class="fas fa-search fa-3x text-muted opacity-50 mb-3 d-block"></i>
+                        <h5 class="text-muted">Không tìm thấy sân phù hợp</h5>
+                        <a href="index.php" class="btn btn-primary btn-sm mt-2">Xem tất cả sân</a>
                     </div>
                 </div>
             <?php endif; ?>
-            
-            <?php foreach ($courts as $court): ?>
-                <div class="col-md-6 col-lg-4">
-                    <div class="court-card-modern h-100 bg-white rounded-3 shadow-sm border-0 overflow-hidden">
-                        <div class="court-image-container position-relative">
-                            <img src="<?php echo escape($court['cover_image']); ?>" 
-                                 class="court-image w-100" alt="<?php echo escape($court['name']); ?>">
-                            <div class="court-status">
-                                <span class="badge bg-success">Còn trống</span>
-                            </div>
+
+            <?php foreach ($courts as $court):
+                $phone = $court['phone'] ?? '0968073500';
+            ?>
+            <div class="col-md-6 col-lg-4">
+                <div class="court-card-v2">
+                    <div class="court-img-wrap">
+                        <img src="<?php echo escape($court['cover_image']); ?>" alt="<?php echo escape($court['name']); ?>">
+                        <span class="court-badge-status">Còn trống</span>
+                        <span class="court-badge-price"><?php echo number_format($court['price_per_hour']); ?>đ/h</span>
+                    </div>
+                    <div class="court-body">
+                        <h5 class="court-title"><?php echo escape($court['name']); ?></h5>
+                        <div class="court-meta">
+                            <span><i class="fas fa-map-marker-alt"></i><?php echo escape($court['location']); ?></span>
+                            <span><i class="fas fa-clock"></i>6:00 – 22:00</span>
                         </div>
-                        
-                        <div class="card-body p-4">
-                            <h5 class="court-name fw-bold mb-2 text-dark"><?php echo escape($court['name']); ?></h5>
-                            
-                            <div class="court-info mb-3">
-                                <div class="info-item d-flex align-items-center mb-2">
-                                    <i class="fas fa-map-marker-alt text-muted me-2"></i>
-                                    <span class="text-muted small"><?php echo escape($court['location']); ?></span>
-                                </div>
-                                <div class="info-item d-flex align-items-center">
-                                    <i class="fas fa-money-bill text-muted me-2"></i>
-                                    <span class="price fw-bold text-success">
-                                        <?php echo number_format($court['price_per_hour']); ?>đ/giờ
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <p class="court-description text-muted small mb-3 lh-sm">
-                                <?php echo escape(substr($court['description'], 0, 80)); ?>...
-                            </p>
-                            
-                            <div class="court-features mb-3">
-                                <div class="d-flex gap-1 flex-wrap">
-                                    <span class="badge bg-light text-dark small">Có mái che</span>
-                                    <span class="badge bg-light text-dark small">Sân gỗ</span>
-                                    <span class="badge bg-light text-dark small">Điều hòa</span>
-                                </div>
-                            </div>
-                            
-                            <div class="court-actions d-flex gap-2">
-                                <a href="booking-online.php?court_id=<?php echo $court['id']; ?>" 
-                                   class="btn btn-primary btn-sm w-100">
-                                    <i class="fas fa-calendar-plus me-1"></i>Đặt sân
-                                </a>
-                            </div>
+                        <div class="court-tags">
+                            <span>Mái che</span><span>Sân gỗ</span><span>Điều hòa</span>
+                        </div>
+                        <div class="court-footer">
+                            <a href="booking-online.php?court_id=<?php echo $court['id']; ?>" class="btn-book">
+                                <i class="fas fa-calendar-check me-1"></i>Đặt sân
+                            </a>
+                            <?php
+                            $phone = $court['phone'] ?? '0968073500';
+                            $phoneDisplay = '0968.073.500';
+                            ?>
+                            <a href="tel:<?php echo $phone; ?>" class="btn-call"
+                               title="Gọi ngay"
+                               onclick="return confirmCallIndex('<?php echo escape($court['name']); ?>', '<?php echo $phone; ?>', '<?php echo $phoneDisplay; ?>')">
+                                <i class="fas fa-phone"></i>
+                            </a>
+                            <a href="map.php?court_id=<?php echo $court['id']; ?>&name=<?php echo urlencode($court['name']); ?>&lat=<?php echo $court['latitude'] ?? '21.0285'; ?>&lng=<?php echo $court['longitude'] ?? '105.8542'; ?>"
+                               class="btn-map" title="Chỉ đường">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </a>
                         </div>
                     </div>
                 </div>
+            </div>
             <?php endforeach; ?>
         </div>
     </div>
 </section>
 
-<!-- Map Preview Section -->
-<section class="map-preview-section py-5 bg-light" id="map">
+<!-- Khu vực phủ sóng -->
+<section style="background:#f8fafc;padding:3.5rem 0;">
     <div class="container">
-        <div class="row align-items-center">
-            <div class="col-lg-6">
-                <div class="map-preview-content">
-                    <h2 class="h3 fw-bold mb-3">🗺️ Khám phá bản đồ sân cầu lông</h2>
-                    <p class="text-muted mb-4">Tìm kiếm và khám phá các sân cầu lông gần bạn trên bản đồ tương tác. Xem vị trí chính xác, so sánh khoảng cách và chọn sân phù hợp nhất.</p>
-                    
-                    <div class="row g-3 mb-4">
-                        <div class="col-sm-6">
-                            <div class="feature-item d-flex align-items-center">
-                                <div class="feature-icon-small bg-primary text-white rounded-circle me-3">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1">Định vị chính xác</h6>
-                                    <small class="text-muted">Vị trí GPS của từng sân</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="feature-item d-flex align-items-center">
-                                <div class="feature-icon-small bg-success text-white rounded-circle me-3">
-                                    <i class="fas fa-route"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1">Chỉ đường</h6>
-                                    <small class="text-muted">Tích hợp Google Maps</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="feature-item d-flex align-items-center">
-                                <div class="feature-icon-small bg-info text-white rounded-circle me-3">
-                                    <i class="fas fa-filter"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1">Lọc thông minh</h6>
-                                    <small class="text-muted">Theo khoảng cách & giá</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-sm-6">
-                            <div class="feature-item d-flex align-items-center">
-                                <div class="feature-icon-small bg-warning text-white rounded-circle me-3">
-                                    <i class="fas fa-clock"></i>
-                                </div>
-                                <div>
-                                    <h6 class="mb-1">Trạng thái thời gian thực</h6>
-                                    <small class="text-muted">Sân trống, đầy, ít slot</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="d-flex gap-3">
-                        <a href="map.php" class="btn btn-primary btn-lg">
-                            <i class="fas fa-map me-2"></i>Mở bản đồ
-                        </a>
-                        <a href="map.php" class="btn btn-outline-primary btn-lg">
-                            <i class="fas fa-search-location me-2"></i>Tìm sân gần tôi
-                        </a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="map-preview-image position-relative">
-                    <div class="map-mockup rounded-4 shadow-lg overflow-hidden">
-                        <div class="map-mockup-header bg-primary text-white p-3">
-                            <div class="d-flex align-items-center">
-                                <div class="mockup-controls d-flex gap-1 me-3">
-                                    <div class="mockup-dot bg-danger"></div>
-                                    <div class="mockup-dot bg-warning"></div>
-                                    <div class="mockup-dot bg-success"></div>
-                                </div>
-                                <small class="fw-bold">Bản đồ sân cầu lông Hà Nội</small>
-                            </div>
-                        </div>
-                        <div class="map-mockup-body bg-light position-relative" style="height: 300px;">
-                            <!-- Mockup map content -->
-                            <div class="position-absolute w-100 h-100" style="background: linear-gradient(45deg, #e3f2fd 25%, transparent 25%), linear-gradient(-45deg, #e3f2fd 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e3f2fd 75%), linear-gradient(-45deg, transparent 75%, #e3f2fd 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; opacity: 0.1;"></div>
-                            
-                            <!-- Mockup markers -->
-                            <div class="position-absolute" style="top: 20%; left: 30%;">
-                                <div class="mockup-marker bg-success"></div>
-                            </div>
-                            <div class="position-absolute" style="top: 40%; left: 60%;">
-                                <div class="mockup-marker bg-warning"></div>
-                            </div>
-                            <div class="position-absolute" style="top: 60%; left: 25%;">
-                                <div class="mockup-marker bg-danger"></div>
-                            </div>
-                            <div class="position-absolute" style="top: 30%; left: 70%;">
-                                <div class="mockup-marker bg-success"></div>
-                            </div>
-                            <div class="position-absolute" style="top: 70%; left: 50%;">
-                                <div class="mockup-marker bg-primary"></div>
-                            </div>
-                            
-                            <!-- Mockup popup -->
-                            <div class="position-absolute" style="top: 35%; left: 45%;">
-                                <div class="mockup-popup bg-white shadow-sm rounded p-2" style="width: 120px;">
-                                    <div class="fw-bold" style="font-size: 0.7rem;">Sân ABC</div>
-                                    <div class="text-muted" style="font-size: 0.6rem;">120,000đ/giờ</div>
-                                    <div class="badge bg-success" style="font-size: 0.5rem;">Còn trống</div>
-                                </div>
-                            </div>
-                            
-                            <!-- Center overlay -->
-                            <div class="position-absolute top-50 start-50 translate-middle">
-                                <div class="text-center">
-                                    <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                        <i class="fas fa-map fa-2x"></i>
-                                    </div>
-                                    <div class="mt-2">
-                                        <small class="fw-bold text-primary">Bản đồ tương tác</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Floating stats -->
-                    <div class="position-absolute top-0 end-0 translate-middle">
-                        <div class="bg-white rounded-pill shadow px-3 py-2">
-                            <small class="fw-bold text-success">50+ sân</small>
-                        </div>
-                    </div>
-                    <div class="position-absolute bottom-0 start-0 translate-middle">
-                        <div class="bg-white rounded-pill shadow px-3 py-2">
-                            <small class="fw-bold text-primary">8 quận/huyện</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="text-center mb-4">
+            <div class="section-eyebrow text-primary">Khu vực</div>
+            <h2 class="section-heading">Khu vực phủ sóng</h2>
+            <p class="section-sub">Chọn khu vực để tìm sân gần bạn nhất</p>
+        </div>
+        <div class="d-flex flex-wrap justify-content-center gap-2 mb-4">
+            <?php foreach ($locations as $location): ?>
+                <a href="index.php?location=<?php echo urlencode($location); ?>"
+                   class="btn btn-outline-primary btn-sm rounded-pill <?php echo $filters['location']===$location?'active':''; ?>">
+                    <i class="fas fa-map-marker-alt me-1"></i><?php echo escape($location); ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+        <div class="text-center">
+            <a href="map.php" class="btn btn-primary rounded-pill px-4">
+                <i class="fas fa-map me-2"></i>Xem tất cả trên bản đồ
+            </a>
         </div>
     </div>
 </section>
 
-<section class="locations-section py-5 bg-light">
+<!-- Map preview section -->
+<section style="background:#fff;padding:3.5rem 0;">
     <div class="container">
-        <div class="row mb-4">
-            <div class="col-12 text-center">
-                <h2 class="h4 fw-bold text-dark mb-2">Khu vực phủ sóng</h2>
-                <p class="text-muted">Chọn khu vực để tìm sân gần bạn nhất</p>
-            </div>
-        </div>
-        
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                <div class="locations-grid d-flex flex-wrap justify-content-center gap-2">
-                    <?php foreach ($locations as $location): ?>
-                        <a href="index.php?location=<?php echo urlencode($location); ?>" 
-                           class="location-btn btn btn-outline-primary btn-sm rounded-pill">
-                            <i class="fas fa-map-marker-alt me-1"></i>
-                            <?php echo escape($location); ?>
-                        </a>
-                    <?php endforeach; ?>
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6">
+                <div class="section-eyebrow text-primary">Bản đồ tương tác</div>
+                <h2 class="section-heading">Khám phá sân trên bản đồ</h2>
+                <p class="text-muted mb-4">Tìm kiếm sân gần bạn, xem vị trí chính xác và chỉ đường tích hợp Google Maps.</p>
+                <div class="row g-3 mb-4">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width:36px;height:36px;background:#eff6ff;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#3b82f6;"><i class="fas fa-map-marker-alt"></i></div>
+                            <div><div class="fw-bold" style="font-size:.85rem;">Định vị GPS</div><small class="text-muted">Tìm sân gần nhất</small></div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width:36px;height:36px;background:#f0fdf4;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#22c55e;"><i class="fas fa-route"></i></div>
+                            <div><div class="fw-bold" style="font-size:.85rem;">Chỉ đường</div><small class="text-muted">Google Maps</small></div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width:36px;height:36px;background:#fffbeb;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#f59e0b;"><i class="fas fa-filter"></i></div>
+                            <div><div class="fw-bold" style="font-size:.85rem;">Lọc thông minh</div><small class="text-muted">Theo khoảng cách & giá</small></div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width:36px;height:36px;background:#f5f3ff;border-radius:10px;display:flex;align-items:center;justify-content:center;color:#8b5cf6;"><i class="fas fa-sync-alt"></i></div>
+                            <div><div class="fw-bold" style="font-size:.85rem;">Thời gian thực</div><small class="text-muted">Trạng thái sân</small></div>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="text-center mt-4">
-                    <a href="map.php" class="btn btn-primary rounded-pill">
-                        <i class="fas fa-map me-2"></i>Xem tất cả trên bản đồ
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="map.php" class="btn-hero-primary">
+                        <i class="fas fa-map"></i> Mở bản đồ
                     </a>
+                    <a href="map.php" class="btn btn-outline-primary rounded-pill px-3">
+                        <i class="fas fa-search-location me-1"></i>Tìm sân gần tôi
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div style="background:linear-gradient(135deg,#1a1a2e,#0f3460);border-radius:20px;padding:1.5rem;position:relative;">
+                    <div style="background:rgba(255,255,255,.05);border-radius:14px;overflow:hidden;height:260px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.1);">
+                        <div class="text-center">
+                            <div style="width:70px;height:70px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.8rem;color:#fff;">
+                                <i class="fas fa-map"></i>
+                            </div>
+                            <div style="color:#fff;font-weight:700;margin-bottom:.5rem;">Bản đồ tương tác Hà Nội</div>
+                            <div style="color:rgba(255,255,255,.5);font-size:.8rem;">20+ sân · 8 quận/huyện</div>
+                        </div>
+                    </div>
+                    <div style="position:absolute;top:-12px;right:20px;background:linear-gradient(135deg,#28a745,#20c997);color:#fff;border-radius:20px;padding:4px 12px;font-size:.75rem;font-weight:700;">
+                        <i class="fas fa-circle me-1" style="font-size:.5rem;"></i>Live
+                    </div>
+                    <div style="position:absolute;bottom:-12px;left:20px;background:#fff;border-radius:20px;padding:4px 12px;font-size:.75rem;font-weight:700;color:#374151;box-shadow:0 4px 12px rgba(0,0,0,.15);">
+                        <i class="fas fa-star text-warning me-1"></i>50+ sân
+                    </div>
                 </div>
             </div>
         </div>
@@ -511,5 +667,46 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
+
+<!-- Modal gọi điện -->
+<div class="modal fade" id="callModalIndex" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:360px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:20px;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#0d6efd,#0dcaf0);padding:1.4rem 1.5rem;text-align:center;color:#fff;">
+                <div style="width:60px;height:60px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto .8rem;">
+                    <i class="fas fa-phone fa-xl"></i>
+                </div>
+                <h5 class="fw-bold mb-1">Gọi cho sân</h5>
+                <div id="callCourtNameIndex" style="opacity:.85;font-size:.9rem;"></div>
+            </div>
+            <div style="padding:1.5rem;text-align:center;">
+                <div style="font-size:.85rem;color:#6b7280;margin-bottom:1rem;">Số điện thoại liên hệ:</div>
+                <div id="callPhoneDisplayIndex" style="font-size:1.8rem;font-weight:900;color:#0d6efd;letter-spacing:2px;margin-bottom:.5rem;"></div>
+                <div style="font-size:.78rem;color:#9ca3af;margin-bottom:1.5rem;"><i class="fas fa-clock me-1"></i>Hỗ trợ 6:00 – 22:00</div>
+                <div class="d-grid gap-2">
+                    <a id="callPhoneLinkIndex" href="#" class="btn btn-primary btn-lg fw-bold"
+                       style="border-radius:14px;background:linear-gradient(135deg,#0d6efd,#0dcaf0);border:none;"
+                       onclick="bootstrap.Modal.getInstance(document.getElementById('callModalIndex')).hide()">
+                        <i class="fas fa-phone me-2"></i>Gọi ngay
+                    </a>
+                    <button class="btn btn-outline-secondary" style="border-radius:14px;" data-bs-dismiss="modal">Huỷ</button>
+                </div>
+            </div>
+            <div style="padding:.7rem;background:#f9fafb;text-align:center;font-size:.75rem;color:#9ca3af;border-top:1px solid #f0f0f0;">
+                <i class="fas fa-shield-alt me-1 text-success"></i>Cuộc gọi trực tiếp — không qua trung gian
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmCallIndex(courtName, phone, phoneDisplay) {
+    document.getElementById('callCourtNameIndex').textContent   = courtName;
+    document.getElementById('callPhoneDisplayIndex').textContent = phoneDisplay;
+    document.getElementById('callPhoneLinkIndex').href           = 'tel:' + phone;
+    new bootstrap.Modal(document.getElementById('callModalIndex')).show();
+    return false;
+}
+</script>
 
 <script src="assets/js/homepage-search.js"></script>
