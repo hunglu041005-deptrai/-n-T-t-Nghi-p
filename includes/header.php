@@ -2,10 +2,10 @@
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/functions.php';
 $isAdminPage = $isAdminPage ?? false;
+$isCoachPage = $isCoachPage ?? false;
 
 // Chặn admin truy cập trang web thường
 if (!$isAdminPage && isAdmin()) {
-    // Kiểm tra xem có đang ở trong thư mục admin không
     $current_path = $_SERVER['REQUEST_URI'];
     if (strpos($current_path, '/admin/') === false) {
         header('Location: admin/dashboard.php');
@@ -80,9 +80,7 @@ if (!$isAdminPage && isAdmin()) {
                     <?php else: ?>
                         <li class="nav-item">
                             <?php
-                            // Xác định đường dẫn logout đúng theo vị trí thư mục
-                            $isCoachPage = $isCoachPage ?? false;
-                            $logoutPath  = $isCoachPage ? '../logout.php' : 'logout.php';
+                            $logoutPath = $isCoachPage ? '../logout.php' : 'logout.php';
                             ?>
                             <a class="nav-link text-danger" href="<?php echo $logoutPath; ?>">
                                 <i class="fas fa-sign-out-alt me-1"></i> Đăng xuất

@@ -373,21 +373,69 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                     
                     <!-- Help -->
-                    <div class="card">
-                        <div class="card-header bg-info text-white">
-                            <h6 class="mb-0 fw-bold">
-                                <i class="fas fa-question-circle me-2"></i>Cần hỗ trợ?
-                            </h6>
+                    <div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.08);border:1px solid #f0f0f0;">
+                        <!-- Header -->
+                        <div style="background:linear-gradient(135deg,#28a745,#20c997);padding:1.1rem 1.3rem;display:flex;align-items:center;gap:.7rem;">
+                            <div style="width:34px;height:34px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <svg width="17" height="17" viewBox="0 0 32 32" fill="none"><path d="M6 20v-4a10 10 0 0120 0v4" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><rect x="4" y="18" width="5" height="8" rx="2.5" fill="#fff"/><rect x="23" y="18" width="5" height="8" rx="2.5" fill="#fff"/></svg>
+                            </div>
+                            <div>
+                                <div style="font-weight:800;color:#fff;font-size:.93rem;">Hỗ trợ 24/7</div>
+                                <div style="color:rgba(255,255,255,.8);font-size:.72rem;display:flex;align-items:center;gap:.3rem;">
+                                    <span style="width:7px;height:7px;background:#a3e635;border-radius:50%;display:inline-block;"></span>
+                                    Đang trực tuyến
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <p class="small text-muted">Liên hệ với chúng tôi nếu bạn cần hỗ trợ trong quá trình đặt sân.</p>
-                            <div class="d-grid gap-2">
-                                <a href="tel:1900123456" class="btn btn-outline-primary btn-sm">
-                                    <i class="fas fa-phone me-2"></i>Hotline: 1900 123 456
-                                </a>
-                                <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#helpModal">
-                                    <i class="fas fa-comments me-2"></i>Chat hỗ trợ
-                                </button>
+
+                        <!-- Body -->
+                        <div style="padding:1.2rem;">
+                            <p style="font-size:.82rem;color:#6b7280;margin-bottom:1rem;line-height:1.55;">
+                                Tư vấn và giải đáp mọi thắc mắc về đặt sân qua nhiều kênh.
+                            </p>
+
+                            <!-- Gọi điện -->
+                            <a href="tel:0968073500"
+                               style="display:flex;align-items:center;justify-content:center;gap:.6rem;
+                                      background:linear-gradient(135deg,#28a745,#20c997);
+                                      border-radius:12px;padding:.75rem;
+                                      font-weight:700;font-size:.88rem;color:#fff;text-decoration:none;
+                                      box-shadow:0 4px 14px rgba(40,167,69,.3);transition:all .2s;
+                                      margin-bottom:.6rem;"
+                               onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(40,167,69,.4)'"
+                               onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(40,167,69,.3)'">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2h3l1.5 3.5-1.75 1.05a9 9 0 004.7 4.7L11.5 9.5 15 11v3a2 2 0 01-2 2C5.37 16 0 10.63 0 4a2 2 0 012-2h1z" fill="#fff" opacity=".9"/></svg>
+                                Gọi: 0968.073.500
+                            </a>
+
+                            <!-- Chat -->
+                            <button onclick="openBookingChat()"
+                                    style="display:flex;align-items:center;justify-content:center;gap:.6rem;
+                                           border:1.5px solid #28a745;border-radius:12px;padding:.7rem;
+                                           font-weight:700;font-size:.88rem;color:#28a745;background:#fff;
+                                           width:100%;cursor:pointer;transition:all .2s;margin-bottom:.6rem;"
+                                    onmouseover="this.style.background='#f0fdf4'"
+                                    onmouseout="this.style.background='#fff'">
+                                <svg width="17" height="17" viewBox="0 0 17 17" fill="none"><path d="M1 3a2 2 0 012-2h11a2 2 0 012 2v7a2 2 0 01-2 2H6l-4 4V3z" fill="#28a745" opacity=".12" stroke="#28a745" stroke-width="1.4" stroke-linejoin="round"/><circle cx="5.5" cy="6.5" r="1" fill="#28a745"/><circle cx="8.5" cy="6.5" r="1" fill="#28a745"/><circle cx="11.5" cy="6.5" r="1" fill="#28a745"/></svg>
+                                Chat trực tuyến
+                            </button>
+
+                            <!-- Email -->
+                            <a href="mailto:support@badmintonpro.vn"
+                               style="display:flex;align-items:center;justify-content:center;gap:.6rem;
+                                      border:1.5px solid #e5e7eb;border-radius:12px;padding:.7rem;
+                                      font-weight:600;font-size:.88rem;color:#4b5563;text-decoration:none;
+                                      background:#fff;transition:all .2s;margin-bottom:.9rem;"
+                               onmouseover="this.style.background='#f9fafb';this.style.borderColor='#d1d5db'"
+                               onmouseout="this.style.background='#fff';this.style.borderColor='#e5e7eb'">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="#6b7280" stroke-width="1.3"/><path d="M1 5l7 5 7-5" stroke="#6b7280" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                Gửi email
+                            </a>
+
+                            <!-- Phản hồi note -->
+                            <div style="display:flex;align-items:center;justify-content:center;gap:.4rem;font-size:.76rem;color:#6b7280;">
+                                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" fill="#28a745" opacity=".1" stroke="#28a745" stroke-width="1.1"/><path d="M6.5 4v3l1.5 1" stroke="#28a745" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                Phản hồi trong vòng 5 phút
                             </div>
                         </div>
                     </div>
@@ -427,6 +475,89 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
+
+<script>
+// ── Chat widget cho booking-online ──
+function openBookingChat() {
+    const existing = document.getElementById('bookingChatWidget');
+    if (existing) { existing.style.display = 'block'; return; }
+
+    const w = document.createElement('div');
+    w.id = 'bookingChatWidget';
+    w.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;width:340px;z-index:9999;background:#fff;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,.2);overflow:hidden;';
+    w.innerHTML = `
+        <div style="background:linear-gradient(135deg,#28a745,#20c997);padding:1rem 1.2rem;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:.6rem;">
+                <div style="width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                    <svg width="18" height="18" viewBox="0 0 32 32" fill="none"><path d="M6 20v-4a10 10 0 0120 0v4" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><rect x="4" y="18" width="5" height="8" rx="2.5" fill="#fff"/><rect x="23" y="18" width="5" height="8" rx="2.5" fill="#fff"/></svg>
+                </div>
+                <div>
+                    <div style="color:#fff;font-weight:700;font-size:.9rem;">Hỗ trợ BadmintonPro</div>
+                    <div style="color:rgba(255,255,255,.85);font-size:.72rem;display:flex;align-items:center;gap:.3rem;">
+                        <span style="width:7px;height:7px;background:#a3e635;border-radius:50%;display:inline-block;"></span>
+                        Online — Phản hồi ngay
+                    </div>
+                </div>
+            </div>
+            <button onclick="document.getElementById('bookingChatWidget').style.display='none'"
+                    style="background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
+        <div id="bookingChatMessages" style="height:230px;overflow-y:auto;padding:1rem;background:#f9fafb;display:flex;flex-direction:column;gap:.7rem;">
+            <div style="display:flex;gap:.5rem;align-items:flex-end;">
+                <div style="width:30px;height:30px;background:linear-gradient(135deg,#28a745,#20c997);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg width="14" height="14" viewBox="0 0 32 32" fill="none"><path d="M6 20v-4a10 10 0 0120 0v4" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><rect x="4" y="18" width="5" height="8" rx="2.5" fill="#fff"/><rect x="23" y="18" width="5" height="8" rx="2.5" fill="#fff"/></svg>
+                </div>
+                <div style="background:#fff;border-radius:14px 14px 14px 0;padding:.65rem .9rem;font-size:.83rem;color:#374151;max-width:230px;box-shadow:0 1px 4px rgba(0,0,0,.07);">
+                    Xin chào! 👋 Bạn cần hỗ trợ gì về việc đặt sân?
+                </div>
+            </div>
+        </div>
+        <div style="padding:.75rem;border-top:1px solid #e5e7eb;display:flex;gap:.5rem;background:#fff;">
+            <input id="bookingChatInput" type="text" placeholder="Nhập tin nhắn..."
+                   style="flex:1;border:1.5px solid #e5e7eb;border-radius:10px;padding:.5rem .85rem;font-size:.85rem;outline:none;"
+                   onfocus="this.style.borderColor='#28a745'" onblur="this.style.borderColor='#e5e7eb'"
+                   onkeydown="if(event.key==='Enter')sendBookingChat()">
+            <button onclick="sendBookingChat()" style="background:linear-gradient(135deg,#28a745,#20c997);border:none;color:#fff;border-radius:10px;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M1 7.5h13M8.5 2l6 5.5-6 5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(w);
+    w.querySelector('#bookingChatInput').focus();
+}
+
+function sendBookingChat() {
+    const input = document.getElementById('bookingChatInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+    const box = document.getElementById('bookingChatMessages');
+
+    const userBubble = document.createElement('div');
+    userBubble.style.cssText = 'display:flex;justify-content:flex-end;';
+    userBubble.innerHTML = `<div style="background:linear-gradient(135deg,#28a745,#20c997);border-radius:14px 14px 0 14px;padding:.65rem .9rem;font-size:.83rem;color:#fff;max-width:230px;">${msg}</div>`;
+    box.appendChild(userBubble);
+    input.value = '';
+    box.scrollTop = box.scrollHeight;
+
+    setTimeout(() => {
+        const replies = [
+            'Cảm ơn bạn! Nhân viên sẽ hỗ trợ ngay.',
+            'Bạn có thể gọi 0968.073.500 để được hỗ trợ nhanh hơn.',
+            'Chúng tôi hoạt động 6:00–22:00 hàng ngày. Để lại SĐT để chúng tôi gọi lại nhé!',
+        ];
+        const rep = replies[Math.floor(Math.random() * replies.length)];
+        const botBubble = document.createElement('div');
+        botBubble.style.cssText = 'display:flex;gap:.5rem;align-items:flex-end;';
+        botBubble.innerHTML = `
+            <div style="width:30px;height:30px;background:linear-gradient(135deg,#28a745,#20c997);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="14" height="14" viewBox="0 0 32 32" fill="none"><path d="M6 20v-4a10 10 0 0120 0v4" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><rect x="4" y="18" width="5" height="8" rx="2.5" fill="#fff"/><rect x="23" y="18" width="5" height="8" rx="2.5" fill="#fff"/></svg>
+            </div>
+            <div style="background:#fff;border-radius:14px 14px 14px 0;padding:.65rem .9rem;font-size:.83rem;color:#374151;max-width:230px;box-shadow:0 1px 4px rgba(0,0,0,.07);">${rep}</div>`;
+        box.appendChild(botBubble);
+        box.scrollTop = box.scrollHeight;
+    }, 900);
+}
+</script>
 
 <script src="assets/js/booking-online.js"></script>
 <?php if ($preselected_court): ?>

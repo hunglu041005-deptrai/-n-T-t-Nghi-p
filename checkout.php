@@ -729,6 +729,86 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                         </div>
                     </div>
+
+                    <!-- Box hỗ trợ -->
+                    <div class="co-card" style="overflow:hidden;">
+                        <div style="padding:1.5rem 1.2rem;text-align:center;">
+                            <!-- Icon headset -->
+                            <div style="width:64px;height:64px;background:linear-gradient(135deg,#28a745,#20c997);
+                                        border-radius:18px;display:flex;align-items:center;justify-content:center;
+                                        margin:0 auto 1rem;box-shadow:0 6px 20px rgba(40,167,69,.3);">
+                                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                                    <path d="M6 20v-4a10 10 0 0120 0v4" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+                                    <rect x="4" y="18" width="5" height="8" rx="2.5" fill="#fff" opacity=".9"/>
+                                    <rect x="23" y="18" width="5" height="8" rx="2.5" fill="#fff" opacity=".9"/>
+                                    <path d="M26 26a4 4 0 01-4 4h-3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+
+                            <div style="font-weight:800;font-size:1.05rem;color:#111827;margin-bottom:.4rem;">Hỗ trợ 24/7</div>
+                            <p style="font-size:.82rem;color:#6b7280;margin-bottom:1.2rem;line-height:1.5;">
+                                Tư vấn và giải đáp mọi thắc mắc qua nhiều kênh
+                            </p>
+
+                            <!-- Gọi điện - filled green -->
+                            <a href="tel:0968073500"
+                               style="display:flex;align-items:center;justify-content:center;gap:.6rem;
+                                      background:linear-gradient(135deg,#28a745,#20c997);
+                                      border-radius:12px;padding:.75rem;
+                                      font-weight:700;font-size:.92rem;color:#fff;text-decoration:none;
+                                      box-shadow:0 4px 15px rgba(40,167,69,.3);
+                                      transition:all .2s;margin-bottom:.6rem;"
+                               onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(40,167,69,.4)'"
+                               onmouseout="this.style.transform='';this.style.boxShadow='0 4px 15px rgba(40,167,69,.3)'">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                    <path d="M3 2h3l1.5 3.5-1.75 1.05a9 9 0 004.7 4.7L11.5 9.5 15 11v3a2 2 0 01-2 2C5.37 16 0 10.63 0 4a2 2 0 012-2h1z" fill="#fff" opacity=".9"/>
+                                </svg>
+                                Gọi: 0968.073.500
+                            </a>
+
+                            <!-- Chat trực tuyến - outline -->
+                            <a href="#" onclick="openLiveChat(); return false;"
+                               style="display:flex;align-items:center;justify-content:center;gap:.6rem;
+                                      border:1.5px solid #28a745;border-radius:12px;padding:.7rem;
+                                      font-weight:700;font-size:.9rem;color:#28a745;text-decoration:none;
+                                      transition:all .2s;margin-bottom:.6rem;background:#fff;"
+                               onmouseover="this.style.background='#f0fdf4'"
+                               onmouseout="this.style.background='#fff'">
+                                <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
+                                    <path d="M1 3a2 2 0 012-2h11a2 2 0 012 2v7a2 2 0 01-2 2H6l-4 4V3z" fill="#28a745" opacity=".12" stroke="#28a745" stroke-width="1.4" stroke-linejoin="round"/>
+                                    <circle cx="5.5" cy="6.5" r="1" fill="#28a745"/>
+                                    <circle cx="8.5" cy="6.5" r="1" fill="#28a745"/>
+                                    <circle cx="11.5" cy="6.5" r="1" fill="#28a745"/>
+                                </svg>
+                                Chat trực tuyến
+                            </a>
+
+                            <!-- Gửi email - outline -->
+                            <a href="mailto:support@badmintonpro.vn"
+                               style="display:flex;align-items:center;justify-content:center;gap:.6rem;
+                                      border:1.5px solid #e5e7eb;border-radius:12px;padding:.7rem;
+                                      font-weight:600;font-size:.9rem;color:#4b5563;text-decoration:none;
+                                      transition:all .2s;margin-bottom:1rem;background:#fff;"
+                               onmouseover="this.style.background='#f9fafb';this.style.borderColor='#d1d5db'"
+                               onmouseout="this.style.background='#fff';this.style.borderColor='#e5e7eb'">
+                                <svg width="17" height="17" viewBox="0 0 17 17" fill="none">
+                                    <rect x="1" y="3" width="15" height="11" rx="2" stroke="#6b7280" stroke-width="1.4"/>
+                                    <path d="M1 5l7.5 5.5L16 5" stroke="#6b7280" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Gửi email
+                            </a>
+
+                            <!-- Thời gian phản hồi -->
+                            <div style="display:flex;align-items:center;justify-content:center;gap:.4rem;font-size:.78rem;color:#6b7280;">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                                    <circle cx="7" cy="7" r="6" fill="#28a745" opacity=".12" stroke="#28a745" stroke-width="1.2"/>
+                                    <path d="M7 4v3.5l2 1.5" stroke="#28a745" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                Phản hồi trong vòng 5 phút
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -739,6 +819,90 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 
 <script>
+// ── Live Chat ──
+function openLiveChat() {
+    const existing = document.getElementById('liveChatWidget');
+    if (existing) { existing.style.display = 'block'; return; }
+
+    const w = document.createElement('div');
+    w.id = 'liveChatWidget';
+    w.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;width:340px;z-index:9999;background:#fff;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,.2);overflow:hidden;';
+    w.innerHTML = `
+        <div style="background:linear-gradient(135deg,#28a745,#20c997);padding:1rem 1.2rem;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:.6rem;">
+                <div style="width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                    <svg width="18" height="18" viewBox="0 0 32 32" fill="none"><path d="M6 20v-4a10 10 0 0120 0v4" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><rect x="4" y="18" width="5" height="8" rx="2.5" fill="#fff"/><rect x="23" y="18" width="5" height="8" rx="2.5" fill="#fff"/></svg>
+                </div>
+                <div>
+                    <div style="color:#fff;font-weight:700;font-size:.9rem;">Hỗ trợ BadmintonPro</div>
+                    <div style="color:rgba(255,255,255,.85);font-size:.72rem;display:flex;align-items:center;gap:.3rem;">
+                        <span style="width:7px;height:7px;background:#a3e635;border-radius:50%;display:inline-block;"></span>
+                        Online — Phản hồi ngay
+                    </div>
+                </div>
+            </div>
+            <button onclick="document.getElementById('liveChatWidget').style.display='none'"
+                    style="background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;">✕</button>
+        </div>
+        <div id="chatMessages" style="height:230px;overflow-y:auto;padding:1rem;background:#f9fafb;display:flex;flex-direction:column;gap:.7rem;">
+            <div style="display:flex;gap:.5rem;align-items:flex-end;">
+                <div style="width:30px;height:30px;background:linear-gradient(135deg,#28a745,#20c997);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <svg width="14" height="14" viewBox="0 0 32 32" fill="none"><path d="M6 20v-4a10 10 0 0120 0v4" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><rect x="4" y="18" width="5" height="8" rx="2.5" fill="#fff"/><rect x="23" y="18" width="5" height="8" rx="2.5" fill="#fff"/></svg>
+                </div>
+                <div style="background:#fff;border-radius:14px 14px 14px 0;padding:.65rem .9rem;font-size:.83rem;color:#374151;max-width:230px;box-shadow:0 1px 4px rgba(0,0,0,.07);">
+                    Xin chào! 👋 Tôi có thể giúp gì cho bạn?
+                </div>
+            </div>
+        </div>
+        <div style="padding:.75rem;border-top:1px solid #e5e7eb;display:flex;gap:.5rem;background:#fff;">
+            <input id="chatInput" type="text" placeholder="Nhập tin nhắn..."
+                   style="flex:1;border:1.5px solid #e5e7eb;border-radius:10px;padding:.5rem .85rem;font-size:.85rem;outline:none;"
+                   onfocus="this.style.borderColor='#28a745'" onblur="this.style.borderColor='#e5e7eb'"
+                   onkeydown="if(event.key==='Enter')sendChat()">
+            <button onclick="sendChat()" style="background:linear-gradient(135deg,#28a745,#20c997);border:none;color:#fff;border-radius:10px;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M1 7.5h13M8.5 2l6 5.5-6 5.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(w);
+    w.querySelector('#chatInput').focus();
+}
+
+function sendChat() {
+    const input = document.getElementById('chatInput');
+    const msg   = input.value.trim();
+    if (!msg) return;
+
+    const box = document.getElementById('chatMessages');
+
+    // Tin user
+    const userBubble = document.createElement('div');
+    userBubble.style.cssText = 'display:flex;justify-content:flex-end;';
+    userBubble.innerHTML = `<div style="background:linear-gradient(135deg,#28a745,#20c997);border-radius:14px 14px 0 14px;padding:.6rem .8rem;font-size:.82rem;color:#fff;max-width:220px;">${msg}</div>`;
+    box.appendChild(userBubble);
+    input.value = '';
+    box.scrollTop = box.scrollHeight;
+
+    // Auto reply sau 1s
+    setTimeout(() => {
+        const replies = [
+            'Cảm ơn bạn đã liên hệ! Nhân viên sẽ hỗ trợ bạn ngay.',
+            'Vui lòng để lại số điện thoại, chúng tôi sẽ gọi lại cho bạn.',
+            'Hotline hỗ trợ: 0968.073.500 — hoạt động 6:00–22:00 hàng ngày.',
+        ];
+        const rep = replies[Math.floor(Math.random() * replies.length)];
+        const botBubble = document.createElement('div');
+        botBubble.style.cssText = 'display:flex;gap:.5rem;align-items:flex-end;';
+        botBubble.innerHTML = `
+            <div style="width:28px;height:28px;background:linear-gradient(135deg,#28a745,#20c997);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="14" height="14" viewBox="0 0 32 32" fill="none"><path d="M6 20v-4a10 10 0 0120 0v4" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/><rect x="4" y="18" width="5" height="8" rx="2.5" fill="#fff"/><rect x="23" y="18" width="5" height="8" rx="2.5" fill="#fff"/></svg>
+            </div>
+            <div style="background:#fff;border-radius:14px 14px 14px 0;padding:.6rem .8rem;font-size:.82rem;color:#374151;max-width:220px;box-shadow:0 1px 4px rgba(0,0,0,.06);">${rep}</div>`;
+        box.appendChild(botBubble);
+        box.scrollTop = box.scrollHeight;
+    }, 1000);
+}
+
 // ═══════════════════════════════════════════
 // CART LOADING
 // ═══════════════════════════════════════════
