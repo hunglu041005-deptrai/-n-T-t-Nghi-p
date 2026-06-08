@@ -31,10 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($user['role'] === 'admin') {
                 header('Location: admin/dashboard.php');
                 exit;
+            } elseif ($user['role'] === 'coach') {
+                header('Location: coach/dashboard.php');
+                exit;
             } else {
                 // Redirect về trang trước nếu có
                 $redirect = $_GET['redirect'] ?? 'index.php';
-                // Chỉ cho phép redirect trong cùng domain
                 if (strpos($redirect, 'http') === false) {
                     header('Location: ' . $redirect);
                 } else {

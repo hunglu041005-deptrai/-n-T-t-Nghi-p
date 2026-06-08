@@ -440,13 +440,11 @@ require_once __DIR__ . '/includes/header.php';
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label-white">HLV mong muốn</label>
-                                    <select name="preferred_coach" class="form-select form-select-dark">
-                                        <option value="">Chọn HLV</option>
-                                        <option>HLV Lữ Đăng Hưng</option>
-                                        <option>HLV Lê Anh Dũng</option>
-                                        <option>HLV Lê Văn C</option>
+                                    <label class="form-label-white">HLV kèm 1-1</label>
+                                    <select name="preferred_coach" id="coachSelect" class="form-select form-select-dark">
+                                        <option value="">Hệ thống tự gán HLV phù hợp</option>
                                     </select>
+                                    <div id="coachStatus" class="mt-2"></div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label-white">Trình độ hiện tại</label>
@@ -586,6 +584,93 @@ function openRegModal(course) {
     const select = document.getElementById('courseSelect');
     if (select) select.value = course;
     document.querySelector('.reg-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Load danh sách HLV + slot khi trang load
+document.addEventListener('DOMContentLoaded', function() {
+    loadCoaches();
+});
+
+function loadCoaches() {
+    fetch('api/coaches.php')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            const select = document.getElementById('coachSelect');
+            if (!select) return;
+
+            // Lưu data để dùng khi chọn
+            select._coaches = data.coaches;
+
+            // Clear và thêm options
+            select.innerHTML = '<option value="">Hệ thống tự gán HLV phù hợp</option>';
+            data.coaches.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.name;
+                opt.textContent = c.full
+                    ? `${c.name} — ĐÃ ĐẦY (${c.current}/${c.max})`
+                    : `${c.name} — Còn ${c.remaining} chỗ`;
+                if (c.full) opt.disabled = true;
+                select.appendChild(opt);
+            });
+
+            // Gắn event change
+            select.addEventListener('change', function() {
+                updateCoachStatus(this.value, select._coaches);
+            });
+        })
+        .catch(() => {
+            // Fallback nếu API lỗi
+            const select = document.getElementById('coachSelect');
+            if (select) {
+                select.innerHTML = `
+                    <option value="">Hệ thống tự gán HLV phù hợp</option>
+                    <option>HLV Nguyễn Văn A</option>
+                    <option>HLV Trần Thị B</option>
+                    <option>HLV Lê Văn C</option>
+                `;
+            }
+        });
+}
+
+function updateCoachStatus(coachName, coaches) {
+    const statusEl = document.getElementById('coachStatus');
+    if (!statusEl) return;
+
+    if (!coachName) {
+        statusEl.innerHTML = `
+            <small style="color:rgba(255,255,255,.5);">
+                <i class="fas fa-info-circle me-1"></i>
+                Hệ thống sẽ tự gán HLV còn chỗ phù hợp nhất
+            </small>`;
+        return;
+    }
+
+    const coach = coaches?.find(c => c.name === coachName);
+    if (!coach) return;
+
+    const pct = (coach.current / coach.max) * 100;
+    const color = coach.full ? '#ef4444' : coach.remaining <= 1 ? '#f59e0b' : '#4ade80';
+
+    statusEl.innerHTML = `
+        <div style="background:rgba(255,255,255,.06);border-radius:10px;padding:.6rem .8rem;border:1px solid rgba(255,255,255,.1);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
+                <small style="color:rgba(255,255,255,.7);font-weight:600;">
+                    <i class="fas fa-user-graduate me-1"></i>${coach.name}
+                </small>
+                <small style="color:${color};font-weight:700;">
+                    ${coach.full ? '❌ Đã đầy' : `✅ Còn ${coach.remaining} chỗ`}
+                </small>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,.1);border-radius:4px;overflow:hidden;">
+                <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;transition:width .4s;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:.3rem;">
+                <small style="color:rgba(255,255,255,.4);font-size:.7rem;">${coach.specialty}</small>
+                <small style="color:rgba(255,255,255,.4);font-size:.7rem;">${coach.current}/${coach.max} học viên</small>
+            </div>
+        </div>
+    `;
 }
 
 document.getElementById('trainingForm')?.addEventListener('submit', function(e) {

@@ -70,6 +70,10 @@ if (!$isAdminPage && isAdmin()) {
                                     <li><a class="dropdown-item" href="admin/dashboard.php"><i class="fas fa-cog me-2"></i> Admin Panel</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                 <?php endif; ?>
+                                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'coach'): ?>
+                                    <li><a class="dropdown-item" href="coach/dashboard.php"><i class="fas fa-chalkboard-teacher me-2 text-primary"></i> HLV Dashboard</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                <?php endif; ?>
                                 <li><a class="dropdown-item text-danger" href="logout.php"><i class="fas fa-sign-out-alt me-2"></i> Đăng xuất</a></li>
                             </ul>
                         </li>

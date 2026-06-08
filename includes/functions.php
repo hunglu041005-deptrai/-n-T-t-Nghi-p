@@ -215,6 +215,22 @@ function blockAdminFromPublic() {
         header('Location: admin-redirect.php');
         exit;
     }
+    // Coach cũng chỉ vào được trang coach
+    if (isset($_SESSION['role']) && $_SESSION['role'] === 'coach') {
+        $allowedPaths = ['coach/', 'login.php', 'logout.php'];
+        $currentUri = $_SERVER['REQUEST_URI'];
+        $isAllowed = false;
+        foreach ($allowedPaths as $p) {
+            if (strpos($currentUri, $p) !== false) {
+                $isAllowed = true;
+                break;
+            }
+        }
+        if (!$isAllowed) {
+            header('Location: coach/dashboard.php');
+            exit;
+        }
+    }
 }
 
 function redirect($url) {
