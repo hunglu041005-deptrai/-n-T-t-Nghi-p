@@ -466,51 +466,133 @@ require_once __DIR__ . '/includes/header.php';
                     <form method="POST" id="payForm">
                         <input type="hidden" name="confirm_payment" value="1">
 
-                        <label class="pay-method selected" id="pm-cash">
-                            <input type="radio" name="payment_method" value="cash" checked onchange="selectPayMethod('cash')">
-                            <div class="pay-method-icon" style="background:#dcfce7;"><i class="fas fa-money-bill-wave" style="color:#16a34a;"></i></div>
+                        <!-- Tiền mặt -->
+                        <label class="pay-method selected" id="pm-cash" onclick="selectPayMethod('cash',this)">
+                            <input type="radio" name="payment_method" value="cash" checked style="accent-color:#16a34a;transform:scale(1.2);">
+                            <div class="pay-method-icon" style="background:#dcfce7;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="13" rx="3" fill="#16a34a" opacity=".15"/><rect x="2" y="6" width="20" height="13" rx="3" stroke="#16a34a" stroke-width="1.8"/><path d="M6 13h4M6 16h3" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="13" r="2.5" fill="#16a34a"/></svg>
+                            </div>
                             <div>
                                 <div style="font-weight:700;">Thanh toán tiền mặt</div>
                                 <small style="color:#6b7280;">Thanh toán trực tiếp tại cơ sở khi đến buổi học đầu tiên</small>
                             </div>
                         </label>
 
-                        <label class="pay-method" id="pm-bank">
-                            <input type="radio" name="payment_method" value="bank" onchange="selectPayMethod('bank')">
-                            <div class="pay-method-icon" style="background:#dbeafe;"><i class="fas fa-university" style="color:#2563eb;"></i></div>
+                        <!-- MoMo -->
+                        <label class="pay-method" id="pm-momo" onclick="selectPayMethod('momo',this)">
+                            <input type="radio" name="payment_method" value="momo" style="accent-color:#db2777;transform:scale(1.2);">
+                            <div class="pay-method-icon" style="background:#fce7f3;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="3" fill="#db2777" opacity=".12"/><rect x="3" y="5" width="18" height="14" rx="3" stroke="#db2777" stroke-width="1.8"/><circle cx="8" cy="11" r="2" fill="#db2777"/><circle cx="12" cy="11" r="2" fill="#db2777"/><circle cx="16" cy="11" r="2" fill="#db2777"/></svg>
+                            </div>
                             <div>
-                                <div style="font-weight:700;">Chuyển khoản ngân hàng</div>
-                                <small style="color:#6b7280;">Chuyển khoản trước — xác nhận trong 30 phút</small>
+                                <div style="font-weight:700;">Ví MoMo</div>
+                                <small style="color:#6b7280;">Chuyển tiền qua số điện thoại MoMo</small>
                             </div>
                         </label>
 
-                        <!-- Chi tiết chuyển khoản (ẩn mặc định) -->
-                        <div id="bankDetail" style="display:none;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:1.2rem;margin-bottom:1rem;font-size:.88rem;">
-                            <div style="font-weight:700;color:#374151;margin-bottom:.8rem;"><i class="fas fa-info-circle text-primary me-2"></i>Thông tin chuyển khoản</div>
-                            <div style="display:grid;gap:.4rem;">
-                                <div><span style="color:#6b7280;min-width:120px;display:inline-block;">Ngân hàng:</span> <strong>Vietcombank</strong></div>
-                                <div><span style="color:#6b7280;min-width:120px;display:inline-block;">Số tài khoản:</span> <strong style="font-family:monospace;">1234567890</strong></div>
-                                <div><span style="color:#6b7280;min-width:120px;display:inline-block;">Chủ tài khoản:</span> <strong>BADMINTON PRO</strong></div>
-                                <div><span style="color:#6b7280;min-width:120px;display:inline-block;">Nội dung CK:</span>
-                                    <strong style="color:#6366f1;"><?php echo escape($reg['student_code']); ?> <?php echo escape($reg['student_name']); ?></strong>
+                        <!-- MoMo panel -->
+                        <div id="momoPanel" style="display:none;background:#fdf2f8;border:1px solid #f9a8d4;border-radius:14px;padding:1.2rem;margin-bottom:.8rem;animation:fadeIn .25s ease;">
+                            <div style="font-weight:700;font-size:.82rem;color:#be185d;margin-bottom:.8rem;display:flex;align-items:center;gap:.4rem;">
+                                <i class="fas fa-mobile-alt"></i> Thông tin thanh toán MoMo
+                            </div>
+                            <div style="display:flex;gap:1rem;align-items:flex-start;">
+                                <img id="momoQr"
+                                     src="https://img.vietqr.io/image/MOMO-0968073500-qr_only.png?amount=<?php echo $price; ?>&addInfo=<?php echo urlencode($reg['student_code']); ?>&accountName=LU+DANG+HUNG"
+                                     alt="QR MoMo"
+                                     style="width:120px;height:120px;border-radius:10px;border:2px solid #f9a8d4;padding:3px;background:#fff;flex-shrink:0;">
+                                <div style="display:grid;gap:.45rem;font-size:.85rem;flex:1;">
+                                    <div style="display:flex;gap:.5rem;">
+                                        <span style="color:#78716c;min-width:115px;">Số điện thoại</span>
+                                        <strong style="font-family:monospace;color:#db2777;">0968073500</strong>
+                                    </div>
+                                    <div style="display:flex;gap:.5rem;">
+                                        <span style="color:#78716c;min-width:115px;">Tên tài khoản</span>
+                                        <strong>LU DANG HUNG</strong>
+                                    </div>
+                                    <div style="display:flex;gap:.5rem;">
+                                        <span style="color:#78716c;min-width:115px;">Số tiền</span>
+                                        <strong style="color:#db2777;"><?php echo number_format($price); ?>đ</strong>
+                                    </div>
+                                    <div style="display:flex;gap:.5rem;">
+                                        <span style="color:#78716c;min-width:115px;">Nội dung CK</span>
+                                        <strong style="font-family:monospace;color:#db2777;"><?php echo escape($reg['student_code']); ?></strong>
+                                    </div>
                                 </div>
-                                <div style="margin-top:.4rem;background:#fffbeb;border-radius:8px;padding:.6rem;color:#92400e;font-size:.8rem;">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                    Ghi đúng nội dung chuyển khoản để xác nhận tự động
-                                </div>
+                            </div>
+                            <div style="margin-top:.7rem;background:#fce7f3;border-radius:8px;padding:.5rem .8rem;font-size:.78rem;color:#9d174d;">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Mở app MoMo → Quét QR hoặc Chuyển tiền → Nhập SĐT → Điền đúng nội dung CK
+                            </div>
+                            <!-- Checkbox xác nhận -->
+                            <div style="margin-top:.85rem;padding:.75rem 1rem;background:#fff;border:1.5px solid #f9a8d4;border-radius:10px;display:flex;align-items:center;gap:.7rem;">
+                                <input type="checkbox" id="momoConfirm" onchange="updatePayBtn()"
+                                       style="width:18px;height:18px;accent-color:#db2777;cursor:pointer;flex-shrink:0;">
+                                <label for="momoConfirm" style="font-size:.84rem;font-weight:600;color:#374151;cursor:pointer;margin:0;">
+                                    Tôi đã chuyển khoản thành công qua MoMo
+                                </label>
                             </div>
                         </div>
 
-                        <label class="pay-method" id="pm-momo">
-                            <input type="radio" name="payment_method" value="momo" onchange="selectPayMethod('momo')">
-                            <div class="pay-method-icon" style="background:#fce7f3;"><i class="fas fa-wallet" style="color:#db2777;"></i></div>
+                        <!-- VNPay/Bank -->
+                        <label class="pay-method" id="pm-vnpay" onclick="selectPayMethod('vnpay',this)">
+                            <input type="radio" name="payment_method" value="vnpay" style="accent-color:#2563eb;transform:scale(1.2);">
+                            <div class="pay-method-icon" style="background:#dbeafe;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V10M19 21V10" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round"/><path d="M2 10l10-7 10 7" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="9" y="14" width="6" height="7" rx="1" fill="#2563eb" opacity=".15" stroke="#2563eb" stroke-width="1.5"/></svg>
+                            </div>
                             <div>
-                                <div style="font-weight:700;">Ví MoMo</div>
-                                <small style="color:#6b7280;">Thanh toán qua ví điện tử MoMo</small>
+                                <div style="font-weight:700;">Chuyển khoản ngân hàng</div>
+                                <small style="color:#6b7280;">MB Bank — xác nhận trong 30 phút</small>
                             </div>
                         </label>
 
-                        <button type="submit" class="btn-pay">
+                        <!-- Bank panel -->
+                        <div id="bankPanel" style="display:none;background:#fffdf0;border:1px solid #fde68a;border-radius:14px;padding:1.2rem;margin-bottom:.8rem;animation:fadeIn .25s ease;">
+                            <div style="font-weight:700;font-size:.82rem;color:#92400e;margin-bottom:.8rem;display:flex;align-items:center;gap:.4rem;">
+                                <i class="fas fa-university"></i> Thông tin chuyển khoản ngân hàng
+                            </div>
+                            <div style="display:flex;gap:1rem;align-items:flex-start;">
+                                <img id="bankQr"
+                                     src="https://img.vietqr.io/image/MB-0968073500-qr_only.png?amount=<?php echo $price; ?>&addInfo=<?php echo urlencode($reg['student_code']); ?>&accountName=LU+DANG+HUNG"
+                                     alt="QR MB Bank"
+                                     style="width:120px;height:120px;border-radius:10px;border:2px solid #fde68a;padding:3px;background:#fff;flex-shrink:0;">
+                                <div style="display:grid;gap:.45rem;font-size:.85rem;flex:1;">
+                                    <div style="display:flex;gap:.5rem;">
+                                        <span style="color:#78716c;min-width:115px;">Ngân hàng</span>
+                                        <strong>MB Bank</strong>
+                                    </div>
+                                    <div style="display:flex;gap:.5rem;">
+                                        <span style="color:#78716c;min-width:115px;">Số tài khoản</span>
+                                        <strong style="font-family:monospace;color:#6366f1;">0968073500</strong>
+                                    </div>
+                                    <div style="display:flex;gap:.5rem;">
+                                        <span style="color:#78716c;min-width:115px;">Chủ tài khoản</span>
+                                        <strong>LU DANG HUNG</strong>
+                                    </div>
+                                    <div style="display:flex;gap:.5rem;">
+                                        <span style="color:#78716c;min-width:115px;">Số tiền</span>
+                                        <strong style="color:#6366f1;"><?php echo number_format($price); ?>đ</strong>
+                                    </div>
+                                    <div style="display:flex;gap:.5rem;">
+                                        <span style="color:#78716c;min-width:115px;">Nội dung CK</span>
+                                        <strong style="font-family:monospace;color:#6366f1;"><?php echo escape($reg['student_code']); ?></strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-top:.7rem;background:#fef9c3;border-radius:8px;padding:.5rem .8rem;font-size:.78rem;color:#854d0e;">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Ghi đúng nội dung chuyển khoản để được xác nhận tự động
+                            </div>
+                            <!-- Checkbox xác nhận -->
+                            <div style="margin-top:.85rem;padding:.75rem 1rem;background:#fff;border:1.5px solid #fde68a;border-radius:10px;display:flex;align-items:center;gap:.7rem;">
+                                <input type="checkbox" id="bankConfirm" onchange="updatePayBtn()"
+                                       style="width:18px;height:18px;accent-color:#d97706;cursor:pointer;flex-shrink:0;">
+                                <label for="bankConfirm" style="font-size:.84rem;font-weight:600;color:#374151;cursor:pointer;margin:0;">
+                                    Tôi đã chuyển khoản thành công
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-pay" id="payBtn">
                             <i class="fas fa-check-circle me-2"></i>Xác nhận thanh toán
                         </button>
 
@@ -599,8 +681,36 @@ require_once __DIR__ . '/includes/header.php';
 function selectPayMethod(method) {
     document.querySelectorAll('.pay-method').forEach(el => el.classList.remove('selected'));
     document.getElementById('pm-' + method)?.classList.add('selected');
-    document.getElementById('bankDetail').style.display = method === 'bank' ? 'block' : 'none';
+    // Hiện/ẩn panels
+    document.getElementById('momoPanel').style.display = method === 'momo'  ? 'block' : 'none';
+    document.getElementById('bankPanel').style.display = method === 'vnpay' ? 'block' : 'none';
+    // Reset checkboxes khi đổi phương thức
+    document.getElementById('momoConfirm').checked = false;
+    document.getElementById('bankConfirm').checked = false;
+    updatePayBtn();
 }
+
+function updatePayBtn() {
+    const method  = document.querySelector('input[name="payment_method"]:checked')?.value || 'cash';
+    const btn     = document.getElementById('payBtn');
+    if (!btn) return;
+    if (method === 'cash') {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        return;
+    }
+    const momoOk = method === 'momo'  && document.getElementById('momoConfirm').checked;
+    const bankOk = method === 'vnpay' && document.getElementById('bankConfirm').checked;
+    btn.disabled    = !(momoOk || bankOk);
+    btn.style.opacity = (momoOk || bankOk) ? '1' : '.5';
+}
+
+// Init
+updatePayBtn();
 </script>
+
+<style>
+@keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+</style>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

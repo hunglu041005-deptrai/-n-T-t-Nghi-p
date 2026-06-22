@@ -45,6 +45,7 @@ if (!$isAdminPage && isAdmin()) {
                     <li class="nav-item"><a class="nav-link" href="bookings.php"><i class="fas fa-calendar-check me-1"></i> Đơn đặt</a></li>
                     <li class="nav-item"><a class="nav-link" href="shop.php"><i class="fas fa-shopping-cart me-1"></i> Shop</a></li>
                     <li class="nav-item"><a class="nav-link" href="users.php"><i class="fas fa-users me-1"></i> Người dùng</a></li>
+                    <li class="nav-item"><a class="nav-link" href="promotions.php"><i class="fas fa-gift me-1"></i> Ưu đãi</a></li>
                 <?php else: ?>
                     <li class="nav-item"><a class="nav-link active" href="index.php">Trang chủ</a></li>
                     <li class="nav-item"><a class="nav-link" href="featured.php">Nổi bật</a></li>

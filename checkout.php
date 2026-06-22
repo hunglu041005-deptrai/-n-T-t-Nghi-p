@@ -176,12 +176,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                 $order_success = true;
 
                 // Xử lý theo phương thức thanh toán
-                if ($method === 'bank') {
-                    // Lưu thông tin chờ xác nhận
-                } elseif ($method === 'momo' || $method === 'vnpay') {
-                    // Production: redirect to gateway
-                    // For now: mark as paid (demo)
-                    $upd = $mysqli->prepare("UPDATE orders SET payment_status='paid' WHERE id=?");
+                if ($method === 'bank' || $method === 'vnpay' || $method === 'momo') {
+                    // Chuyển khoản / MoMo: đánh dấu chờ xác minh thủ công
+                    $upd = $mysqli->prepare("UPDATE orders SET payment_status='pending_verification' WHERE id=?");
                     $upd->bind_param('i', $order_id_result);
                     $upd->execute(); $upd->close();
                 }
@@ -294,13 +291,8 @@ require_once __DIR__ . '/includes/header.php';
 }
 .pm-card.active .pm-check-wrap { opacity: 1; transform: scale(1); }
 
-/* Bank detail */
-#bankDetail {
-    background: #fffdf0;
-    border: 1px solid #fde68a;
-    border-radius: 14px;
-    padding: 1rem 1.2rem;
-    margin-bottom: .7rem;
+/* Bank/MoMo transfer detail panels */
+#bankDetail, #momoDetail {
     display: none;
     animation: slideDown .2s ease;
 }
@@ -308,7 +300,7 @@ require_once __DIR__ . '/includes/header.php';
     from { opacity:0; transform:translateY(-8px); }
     to   { opacity:1; transform:translateY(0); }
 }
-#bankDetail .bank-ref { font-family:monospace; font-weight:800; color:#6366f1;
+#bankDetail .bank-ref, #momoDetail .bank-ref { font-family:monospace; font-weight:800;
                         font-size:1rem; letter-spacing:1px; }
 
 /* Order summary */
@@ -431,15 +423,25 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 
-    <?php if (($_POST['payment_method'] ?? 'cod') === 'bank'): ?>
+    <?php if (in_array($_POST['payment_method'] ?? 'cod', ['bank','vnpay'])): ?>
     <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:16px;padding:1.2rem 1.5rem;margin-bottom:1.5rem;">
         <div class="fw-bold mb-2" style="color:#92400e;"><i class="fas fa-university me-2"></i>Hoàn tất chuyển khoản để xác nhận đơn</div>
         <table style="font-size:.88rem;width:100%;">
-            <tr><td style="color:#6b7280;width:150px;">Ngân hàng:</td><td><strong>Vietcombank</strong></td></tr>
-            <tr><td style="color:#6b7280;">Số tài khoản:</td><td><strong style="font-family:monospace;">1234567890</strong></td></tr>
-            <tr><td style="color:#6b7280;">Chủ TK:</td><td><strong>BADMINTON PRO</strong></td></tr>
+            <tr><td style="color:#6b7280;width:150px;">Ngân hàng:</td><td><strong>MB Bank</strong></td></tr>
+            <tr><td style="color:#6b7280;">Số tài khoản:</td><td><strong style="font-family:monospace;">0968073500</strong></td></tr>
+            <tr><td style="color:#6b7280;">Chủ TK:</td><td><strong>LU DANG HUNG</strong></td></tr>
             <tr><td style="color:#6b7280;">Nội dung CK:</td>
                 <td><strong style="color:#6366f1;"><?php echo escape($order_number); ?></strong></td></tr>
+        </table>
+    </div>
+    <?php elseif (($_POST['payment_method'] ?? '') === 'momo'): ?>
+    <div style="background:#fdf2f8;border:1px solid #f9a8d4;border-radius:16px;padding:1.2rem 1.5rem;margin-bottom:1.5rem;">
+        <div class="fw-bold mb-2" style="color:#be185d;"><i class="fas fa-wallet me-2"></i>Hoàn tất chuyển khoản MoMo để xác nhận đơn</div>
+        <table style="font-size:.88rem;width:100%;">
+            <tr><td style="color:#6b7280;width:150px;">Số điện thoại:</td><td><strong style="font-family:monospace;color:#db2777;">0968073500</strong></td></tr>
+            <tr><td style="color:#6b7280;">Tên tài khoản:</td><td><strong>LU DANG HUNG</strong></td></tr>
+            <tr><td style="color:#6b7280;">Nội dung CK:</td>
+                <td><strong style="color:#db2777;"><?php echo escape($order_number); ?></strong></td></tr>
         </table>
     </div>
     <?php endif; ?>
@@ -603,33 +605,105 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                         </div>
 
+                        <!-- MoMo payment panel -->
+                        <div id="momoDetail" style="background:#fdf2f8;border:1px solid #f9a8d4;border-radius:14px;padding:1rem 1.2rem;margin-bottom:.7rem;display:none;animation:slideDown .2s ease;">
+                            <div style="font-weight:700;font-size:.82rem;color:#be185d;margin-bottom:.7rem;display:flex;align-items:center;gap:.4rem;">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#db2777" stroke-width="1.3"/><path d="M7 4v4M7 9.5v.5" stroke="#db2777" stroke-width="1.4" stroke-linecap="round"/></svg>
+                                Thông tin thanh toán MoMo
+                            </div>
+                            <div style="display:flex;gap:1rem;align-items:flex-start;">
+                                <!-- QR MoMo -->
+                                <div style="flex-shrink:0;text-align:center;">
+                                    <img id="momoQrImg"
+                                         src="https://img.vietqr.io/image/MOMO-0968073500-qr_only.png?amount=0&addInfo=DONHANG&accountName=LU+DANG+HUNG"
+                                         alt="QR MoMo"
+                                         style="width:130px;height:130px;border-radius:10px;border:2px solid #f9a8d4;background:#fff;padding:4px;">
+                                    <div style="font-size:.68rem;color:#be185d;margin-top:4px;font-weight:600;">Quét bằng app MoMo</div>
+                                </div>
+                                <!-- Info -->
+                                <div style="flex:1;display:grid;gap:.45rem;font-size:.85rem;">
+                                    <div style="display:flex;gap:.5rem;align-items:center;">
+                                        <span style="color:#78716c;min-width:105px;">Số điện thoại</span>
+                                        <span class="bank-ref" style="color:#db2777;">0968073500</span>
+                                    </div>
+                                    <div style="display:flex;gap:.5rem;align-items:center;">
+                                        <span style="color:#78716c;min-width:105px;">Tên tài khoản</span>
+                                        <span style="font-weight:700;">LU DANG HUNG</span>
+                                    </div>
+                                    <div style="display:flex;gap:.5rem;align-items:center;">
+                                        <span style="color:#78716c;min-width:105px;">Số tiền</span>
+                                        <span id="momoAmount" style="font-weight:800;color:#db2777;">—</span>
+                                    </div>
+                                    <div style="display:flex;gap:.5rem;align-items:center;">
+                                        <span style="color:#78716c;min-width:105px;">Nội dung CK</span>
+                                        <span id="momoRef" class="bank-ref" style="color:#db2777;">Mã đơn hàng</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-top:.7rem;background:#fce7f3;border-radius:8px;padding:.5rem .8rem;font-size:.78rem;color:#9d174d;display:flex;align-items:center;gap:.4rem;">
+                                <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1L1 11.5h11L6.5 1z" stroke="#db2777" stroke-width="1.2" stroke-linejoin="round"/><path d="M6.5 5v3M6.5 9.2v.3" stroke="#db2777" stroke-width="1.2" stroke-linecap="round"/></svg>
+                                Mở app MoMo → Quét QR hoặc Chuyển tiền → Nhập SĐT → Điền đúng nội dung CK
+                            </div>
+                            <!-- Transfer confirmation checkbox -->
+                            <div style="margin-top:.85rem;padding:.75rem 1rem;background:#fff;border:1.5px solid #f9a8d4;border-radius:10px;display:flex;align-items:center;gap:.7rem;">
+                                <input type="checkbox" id="confirmTransferCheck" onchange="handleTransferCheck(this)"
+                                       style="width:18px;height:18px;accent-color:#db2777;cursor:pointer;flex-shrink:0;">
+                                <label for="confirmTransferCheck" style="font-size:.84rem;font-weight:600;color:#374151;cursor:pointer;margin:0;line-height:1.4;">
+                                    Tôi đã chuyển khoản thành công
+                                </label>
+                            </div>
+                        </div>
+
                         <!-- Bank info panel -->
-                        <div id="bankDetail">
+                        <div id="bankDetail" style="background:#fffdf0;border:1px solid #fde68a;border-radius:14px;padding:1rem 1.2rem;margin-bottom:.7rem;display:none;animation:slideDown .2s ease;">
                             <div style="font-weight:700;font-size:.82rem;color:#92400e;margin-bottom:.7rem;display:flex;align-items:center;gap:.4rem;">
                                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6.5" stroke="#d97706" stroke-width="1.3"/><path d="M7 4v4M7 9.5v.5" stroke="#d97706" stroke-width="1.4" stroke-linecap="round"/></svg>
-                                Thông tin chuyển khoản
+                                Thông tin chuyển khoản ngân hàng
                             </div>
-                            <div style="display:grid;gap:.45rem;font-size:.85rem;">
-                                <div style="display:flex;gap:.5rem;align-items:center;">
-                                    <span style="color:#78716c;min-width:115px;">Ngân hàng</span>
-                                    <span style="font-weight:700;">Vietcombank</span>
+                            <div style="display:flex;gap:1rem;align-items:flex-start;">
+                                <!-- QR MB Bank (VietQR) -->
+                                <div style="flex-shrink:0;text-align:center;">
+                                    <img id="bankQrImg"
+                                         src="https://img.vietqr.io/image/MB-0968073500-qr_only.png?amount=0&addInfo=DONHANG&accountName=LU+DANG+HUNG"
+                                         alt="QR MB Bank"
+                                         style="width:130px;height:130px;border-radius:10px;border:2px solid #fde68a;background:#fff;padding:4px;">
+                                    <div style="font-size:.68rem;color:#92400e;margin-top:4px;font-weight:600;">Quét bằng app ngân hàng</div>
                                 </div>
-                                <div style="display:flex;gap:.5rem;align-items:center;">
-                                    <span style="color:#78716c;min-width:115px;">Số tài khoản</span>
-                                    <span class="bank-ref">1234567890</span>
-                                </div>
-                                <div style="display:flex;gap:.5rem;align-items:center;">
-                                    <span style="color:#78716c;min-width:115px;">Chủ tài khoản</span>
-                                    <span style="font-weight:700;">BADMINTON PRO</span>
-                                </div>
-                                <div style="display:flex;gap:.5rem;align-items:center;">
-                                    <span style="color:#78716c;min-width:115px;">Nội dung CK</span>
-                                    <span id="bankRef" class="bank-ref" style="color:#6366f1;">Mã đơn hàng</span>
+                                <!-- Info -->
+                                <div style="flex:1;display:grid;gap:.45rem;font-size:.85rem;">
+                                    <div style="display:flex;gap:.5rem;align-items:center;">
+                                        <span style="color:#78716c;min-width:105px;">Ngân hàng</span>
+                                        <span style="font-weight:700;">MB Bank</span>
+                                    </div>
+                                    <div style="display:flex;gap:.5rem;align-items:center;">
+                                        <span style="color:#78716c;min-width:105px;">Số tài khoản</span>
+                                        <span class="bank-ref" style="color:#6366f1;">0968073500</span>
+                                    </div>
+                                    <div style="display:flex;gap:.5rem;align-items:center;">
+                                        <span style="color:#78716c;min-width:105px;">Chủ tài khoản</span>
+                                        <span style="font-weight:700;">LU DANG HUNG</span>
+                                    </div>
+                                    <div style="display:flex;gap:.5rem;align-items:center;">
+                                        <span style="color:#78716c;min-width:105px;">Số tiền</span>
+                                        <span id="bankAmount" style="font-weight:800;color:#6366f1;">—</span>
+                                    </div>
+                                    <div style="display:flex;gap:.5rem;align-items:center;">
+                                        <span style="color:#78716c;min-width:105px;">Nội dung CK</span>
+                                        <span id="bankRef" class="bank-ref" style="color:#6366f1;">Mã đơn hàng</span>
+                                    </div>
                                 </div>
                             </div>
                             <div style="margin-top:.7rem;background:#fef9c3;border-radius:8px;padding:.5rem .8rem;font-size:.78rem;color:#854d0e;display:flex;align-items:center;gap:.4rem;">
                                 <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1L1 11.5h11L6.5 1z" stroke="#d97706" stroke-width="1.2" stroke-linejoin="round"/><path d="M6.5 5v3M6.5 9.2v.3" stroke="#d97706" stroke-width="1.2" stroke-linecap="round"/></svg>
                                 Ghi đúng nội dung để được xác nhận tự động
+                            </div>
+                            <!-- Transfer confirmation checkbox -->
+                            <div style="margin-top:.85rem;padding:.75rem 1rem;background:#fff;border:1.5px solid #fde68a;border-radius:10px;display:flex;align-items:center;gap:.7rem;">
+                                <input type="checkbox" id="confirmTransferCheckBank" onchange="handleTransferCheck(this)"
+                                       style="width:18px;height:18px;accent-color:#d97706;cursor:pointer;flex-shrink:0;">
+                                <label for="confirmTransferCheckBank" style="font-size:.84rem;font-weight:600;color:#374151;cursor:pointer;margin:0;line-height:1.4;">
+                                    Tôi đã chuyển khoản thành công
+                                </label>
                             </div>
                         </div>
 
@@ -954,7 +1028,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('osTotal').textContent = total.toLocaleString('vi-VN') + 'đ';
 
     cartInput.value = JSON.stringify(cart);
-    if (submitBtn) submitBtn.disabled = false;
+    // Enable button for COD (default); for momo/bank/vnpay the checkbox controls it
+    updatePlaceOrderBtn();
+    if (document.getElementById('paymentMethodInput')?.value === 'cod') {
+        if (submitBtn) submitBtn.disabled = false;
+    }
 });
 
 // Clear cart on success
@@ -970,16 +1048,66 @@ function selectPM(method, el) {
     el.classList.add('active');
     document.getElementById('paymentMethodInput').value = method;
 
-    // Bank detail panel
-    const bd = document.getElementById('bankDetail');
-    if (method === 'bank') {
-        bd.style.display = 'block';
-        // Generate a temp ref for display
-        const ref = 'ORDER-' + Date.now().toString(36).toUpperCase().slice(-6);
+    // Reset checkboxes whenever payment method changes
+    const cbMomo = document.getElementById('confirmTransferCheck');
+    const cbBank = document.getElementById('confirmTransferCheckBank');
+    if (cbMomo) cbMomo.checked = false;
+    if (cbBank) cbBank.checked = false;
+
+    // Hide all panels
+    document.getElementById('bankDetail').style.display  = 'none';
+    document.getElementById('momoDetail').style.display  = 'none';
+
+    const ref = 'ORD-' + Date.now().toString(36).toUpperCase().slice(-6);
+
+    if (method === 'bank' || method === 'vnpay') {
+        document.getElementById('bankDetail').style.display = 'block';
         document.getElementById('bankRef').textContent = ref;
-    } else {
-        bd.style.display = 'none';
+        // Lấy tổng tiền từ DOM
+        const amountEl = document.getElementById('osTotal');
+        const amountRaw = amountEl ? amountEl.textContent.replace(/[^\d]/g,'') : '0';
+        const amountEl2 = document.getElementById('bankAmount');
+        if (amountEl2) amountEl2.textContent = amountEl ? amountEl.textContent : '—';
+        // Update QR với số tiền + nội dung
+        const qr = document.getElementById('bankQrImg');
+        if (qr) qr.src = `https://img.vietqr.io/image/MB-0968073500-qr_only.png?amount=${amountRaw}&addInfo=${encodeURIComponent(ref)}&accountName=LU+DANG+HUNG`;
+    } else if (method === 'momo') {
+        document.getElementById('momoDetail').style.display = 'block';
+        document.getElementById('momoRef').textContent = ref;
+        // Lấy tổng tiền
+        const amountEl = document.getElementById('osTotal');
+        const amountRaw = amountEl ? amountEl.textContent.replace(/[^\d]/g,'') : '0';
+        const amountEl2 = document.getElementById('momoAmount');
+        if (amountEl2) amountEl2.textContent = amountEl ? amountEl.textContent : '—';
+        // QR MoMo qua VietQR (số điện thoại MoMo)
+        const qr = document.getElementById('momoQrImg');
+        if (qr) qr.src = `https://img.vietqr.io/image/MOMO-0968073500-qr_only.png?amount=${amountRaw}&addInfo=${encodeURIComponent(ref)}&accountName=LU+DANG+HUNG`;
     }
+
+    // Update submit button state
+    updatePlaceOrderBtn();
+}
+
+// ═══════════════════════════════════════════
+// TRANSFER CONFIRMATION CHECKBOX
+// ═══════════════════════════════════════════
+function handleTransferCheck(checkbox) {
+    updatePlaceOrderBtn();
+}
+
+function updatePlaceOrderBtn() {
+    const btn    = document.getElementById('placeOrderBtn');
+    if (!btn) return;
+    const method = document.getElementById('paymentMethodInput')?.value || 'cod';
+    const needsCheck = (method === 'momo' || method === 'bank' || method === 'vnpay');
+    if (!needsCheck) {
+        // COD: rely on cart-length check only (button enabled when cart has items)
+        return;
+    }
+    const cbMomo = document.getElementById('confirmTransferCheck');
+    const cbBank = document.getElementById('confirmTransferCheckBank');
+    const checked = (cbMomo && cbMomo.checked) || (cbBank && cbBank.checked);
+    btn.disabled = !checked;
 }
 
 // ═══════════════════════════════════════════

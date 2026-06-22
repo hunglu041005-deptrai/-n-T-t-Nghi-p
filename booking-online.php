@@ -447,6 +447,126 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- Success Modal -->
 <div class="modal fade" id="bookingSuccessModal" tabindex="-1">
+
+<!-- Payment Confirmation Modal (MoMo / Bank Transfer) -->
+<div class="modal fade" id="paymentConfirmModal" tabindex="-1" aria-labelledby="paymentConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:20px;overflow:hidden;border:none;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+            <div class="modal-header" id="paymentConfirmModalHeader" style="padding:1.2rem 1.5rem;border-bottom:1px solid #f3f4f6;">
+                <h5 class="modal-title fw-bold" id="paymentConfirmModalLabel">
+                    <i id="pmModalIcon" class="fas fa-wallet me-2"></i>
+                    <span id="pmModalTitle">Xác nhận thanh toán</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" style="padding:1.5rem;">
+
+                <!-- MoMo Panel -->
+                <div id="pmMomoPanel">
+                    <div style="background:#fdf2f8;border:1px solid #f9a8d4;border-radius:14px;padding:1rem 1.2rem;margin-bottom:1rem;">
+                        <div style="font-weight:700;font-size:.82rem;color:#be185d;margin-bottom:.7rem;">
+                            <i class="fas fa-mobile-alt me-1"></i> Chuyển khoản qua MoMo
+                        </div>
+                        <div style="display:flex;gap:1rem;align-items:flex-start;">
+                            <img id="pmMomoQr"
+                                 src="https://img.vietqr.io/image/MOMO-0968073500-qr_only.png?amount=0&addInfo=DATSAN&accountName=LU+DANG+HUNG"
+                                 alt="QR MoMo"
+                                 style="width:120px;height:120px;border-radius:10px;border:2px solid #f9a8d4;padding:3px;background:#fff;flex-shrink:0;">
+                            <div style="display:grid;gap:.5rem;font-size:.88rem;">
+                                <div style="display:flex;gap:.5rem;">
+                                    <span style="color:#78716c;min-width:110px;">Số điện thoại</span>
+                                    <strong style="font-family:monospace;color:#db2777;font-size:.95rem;">0968073500</strong>
+                                </div>
+                                <div style="display:flex;gap:.5rem;">
+                                    <span style="color:#78716c;min-width:110px;">Tên tài khoản</span>
+                                    <strong>LU DANG HUNG</strong>
+                                </div>
+                                <div style="display:flex;gap:.5rem;">
+                                    <span style="color:#78716c;min-width:110px;">Số tiền</span>
+                                    <strong id="pmMomoAmount" style="color:#db2777;">—</strong>
+                                </div>
+                                <div style="display:flex;gap:.5rem;">
+                                    <span style="color:#78716c;min-width:110px;">Nội dung CK</span>
+                                    <strong id="pmMomoRef" style="font-family:monospace;color:#db2777;">—</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top:.7rem;background:#fce7f3;border-radius:8px;padding:.5rem .8rem;font-size:.77rem;color:#9d174d;">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Mở app MoMo → Quét QR hoặc Chuyển tiền → Nhập SĐT → Điền đúng nội dung CK
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bank / VNPay Panel -->
+                <div id="pmBankPanel" style="display:none;">
+                    <div style="background:#fffdf0;border:1px solid #fde68a;border-radius:14px;padding:1rem 1.2rem;margin-bottom:1rem;">
+                        <div style="font-weight:700;font-size:.82rem;color:#92400e;margin-bottom:.7rem;">
+                            <i class="fas fa-university me-1"></i> Chuyển khoản ngân hàng (MB Bank)
+                        </div>
+                        <div style="display:flex;gap:1rem;align-items:flex-start;">
+                            <img id="pmBankQr"
+                                 src="https://img.vietqr.io/image/MB-0968073500-qr_only.png?amount=0&addInfo=DATSAN&accountName=LU+DANG+HUNG"
+                                 alt="QR MB Bank"
+                                 style="width:120px;height:120px;border-radius:10px;border:2px solid #fde68a;padding:3px;background:#fff;flex-shrink:0;">
+                            <div style="display:grid;gap:.5rem;font-size:.88rem;">
+                                <div style="display:flex;gap:.5rem;">
+                                    <span style="color:#78716c;min-width:110px;">Ngân hàng</span>
+                                    <strong>MB Bank</strong>
+                                </div>
+                                <div style="display:flex;gap:.5rem;">
+                                    <span style="color:#78716c;min-width:110px;">Số tài khoản</span>
+                                    <strong style="font-family:monospace;color:#6366f1;font-size:.95rem;">0968073500</strong>
+                                </div>
+                                <div style="display:flex;gap:.5rem;">
+                                    <span style="color:#78716c;min-width:110px;">Chủ tài khoản</span>
+                                    <strong>LU DANG HUNG</strong>
+                                </div>
+                                <div style="display:flex;gap:.5rem;">
+                                    <span style="color:#78716c;min-width:110px;">Số tiền</span>
+                                    <strong id="pmBankAmount" style="color:#6366f1;">—</strong>
+                                </div>
+                                <div style="display:flex;gap:.5rem;">
+                                    <span style="color:#78716c;min-width:110px;">Nội dung CK</span>
+                                    <strong id="pmBankRef" style="font-family:monospace;color:#6366f1;">—</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top:.7rem;background:#fef9c3;border-radius:8px;padding:.5rem .8rem;font-size:.77rem;color:#854d0e;">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Ghi đúng nội dung để được xác nhận tự động
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Confirmation checkbox -->
+                <div style="padding:.85rem 1rem;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:12px;display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;">
+                    <input type="checkbox" id="confirmTransferCheck" onchange="document.getElementById('pmConfirmBtn').disabled = !this.checked"
+                           style="width:20px;height:20px;accent-color:#28a745;cursor:pointer;flex-shrink:0;">
+                    <label for="confirmTransferCheck" style="font-size:.88rem;font-weight:600;color:#374151;cursor:pointer;margin:0;line-height:1.4;">
+                        Tôi đã chuyển khoản thành công
+                    </label>
+                </div>
+
+                <div style="font-size:.78rem;color:#9ca3af;text-align:center;">
+                    <i class="fas fa-shield-alt me-1"></i>
+                    Đơn đặt sân sẽ được xác nhận sau khi kiểm tra giao dịch
+                </div>
+            </div>
+            <div class="modal-footer" style="padding:1rem 1.5rem;border-top:1px solid #f3f4f6;gap:.7rem;">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius:10px;font-weight:600;">
+                    Huỷ
+                </button>
+                <button type="button" id="pmConfirmBtn" disabled
+                        onclick="proceedBookingAfterPayment()"
+                        style="background:linear-gradient(135deg,#28a745,#20c997);color:#fff;border:none;border-radius:10px;padding:.6rem 1.5rem;font-weight:700;cursor:pointer;transition:opacity .2s;"
+                >
+                    <i class="fas fa-check me-2"></i>Xác nhận đặt sân
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-body text-center p-4">
@@ -475,6 +595,25 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
+
+<script>
+/* Payment confirm modal button styling */
+document.addEventListener('DOMContentLoaded', function() {
+    const pmBtn = document.getElementById('pmConfirmBtn');
+    if (pmBtn) {
+        pmBtn.style.opacity = pmBtn.disabled ? '0.5' : '1';
+    }
+});
+document.addEventListener('change', function(e) {
+    if (e.target && e.target.id === 'confirmTransferCheck') {
+        const pmBtn = document.getElementById('pmConfirmBtn');
+        if (pmBtn) {
+            pmBtn.disabled = !e.target.checked;
+            pmBtn.style.opacity = e.target.checked ? '1' : '0.5';
+        }
+    }
+});
+</script>
 
 <script>
 // ── Chat widget cho booking-online ──

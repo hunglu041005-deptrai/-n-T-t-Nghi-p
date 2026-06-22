@@ -1,5 +1,12 @@
 <?php
 require_once __DIR__ . '/../includes/functions.php';
+
+// Auto-add category column
+$chk = $mysqli->query("SHOW COLUMNS FROM courts LIKE 'category'");
+if ($chk && $chk->num_rows === 0) {
+    $mysqli->query("ALTER TABLE courts ADD COLUMN category VARCHAR(100) DEFAULT '' COMMENT 'Comma-separated: premium,popular,new,promo'");
+}
+
 requireAdmin();
 $isAdminPage = true;
 $message = '';
@@ -32,17 +39,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $image       = trim($_POST['image']       ?? '');
         $description = trim($_POST['description'] ?? '');
         $featured    = isset($_POST['featured']) ? 1 : 0;
+        $categories  = $_POST['categories'] ?? [];
+        $category    = implode(',', array_filter($categories, fn($c) => in_array($c, ['premium','popular','new','promo'])));
 
         if ($name && $location && $price) {
             if (!empty($_POST['edit_id'])) {
                 $edit_id = intval($_POST['edit_id']);
-                $stmt = $mysqli->prepare('UPDATE courts SET name=?, location=?, price_per_hour=?, cover_image=?, description=?, featured=? WHERE id=?');
-                $stmt->bind_param('ssissii', $name, $location, $price, $image, $description, $featured, $edit_id);
+                $stmt = $mysqli->prepare('UPDATE courts SET name=?, location=?, price_per_hour=?, cover_image=?, description=?, featured=?, category=? WHERE id=?');
+                $stmt->bind_param('ssissisi', $name, $location, $price, $image, $description, $featured, $category, $edit_id);
                 $stmt->execute();
                 $message = 'Cập nhật sân thành công.';
             } else {
-                $stmt = $mysqli->prepare('INSERT INTO courts (name, location, price_per_hour, cover_image, description, featured) VALUES (?,?,?,?,?,?)');
-                $stmt->bind_param('ssissi', $name, $location, $price, $image, $description, $featured);
+                $stmt = $mysqli->prepare('INSERT INTO courts (name, location, price_per_hour, cover_image, description, featured, category) VALUES (?,?,?,?,?,?,?)');
+                $stmt->bind_param('ssissis', $name, $location, $price, $image, $description, $featured, $category);
                 $stmt->execute();
                 $message = 'Thêm sân mới thành công.';
             }
@@ -150,6 +159,48 @@ require_once __DIR__ . '/../includes/header.php';
                         <small class="text-muted">Sân nổi bật sẽ hiển thị trong trang "Nổi bật"</small>
                     </div>
 
+                    <!-- DANH MỤC -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-tags text-primary me-1"></i>Danh mục nổi bật
+                        </label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="form-check border rounded p-2">
+                                    <input class="form-check-input" type="checkbox" name="categories[]" value="premium" id="cat_premium">
+                                    <label class="form-check-label small fw-bold" for="cat_premium">
+                                        👑 Sân cao cấp
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check border rounded p-2">
+                                    <input class="form-check-input" type="checkbox" name="categories[]" value="popular" id="cat_popular">
+                                    <label class="form-check-label small fw-bold" for="cat_popular">
+                                        🔥 Phổ biến nhất
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check border rounded p-2">
+                                    <input class="form-check-input" type="checkbox" name="categories[]" value="new" id="cat_new">
+                                    <label class="form-check-label small fw-bold" for="cat_new">
+                                        ✨ Mới nhất
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check border rounded p-2">
+                                    <input class="form-check-input" type="checkbox" name="categories[]" value="promo" id="cat_promo">
+                                    <label class="form-check-label small fw-bold" for="cat_promo">
+                                        % Khuyến mãi
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <small class="text-muted">Có thể chọn nhiều danh mục</small>
+                    </div>
+
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary" id="submitBtn">
                             <i class="fas fa-save me-2"></i>Lưu sân
@@ -183,6 +234,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <th>Khu vực</th>
                                 <th>Giá/h</th>
                                 <th style="width:90px;">Nổi bật</th>
+                                <th>Danh mục</th>
                                 <th>Hành động</th>
                             </tr>
                         </thead>
@@ -221,6 +273,16 @@ require_once __DIR__ . '/../includes/header.php';
                                         </form>
                                     </td>
                                     <td>
+                                        <?php
+                                        $cats = array_filter(explode(',', $court['category'] ?? ''));
+                                        $catBadges = ['premium'=>['bg-warning text-dark','👑'], 'popular'=>['bg-danger text-white','🔥'], 'new'=>['bg-info text-white','✨'], 'promo'=>['bg-success text-white','%']];
+                                        foreach ($cats as $c):
+                                            if (isset($catBadges[$c])):
+                                        ?>
+                                            <span class="badge <?php echo $catBadges[$c][0]; ?> me-1"><?php echo $catBadges[$c][1]; ?></span>
+                                        <?php endif; endforeach; ?>
+                                    </td>
+                                    <td>
                                         <button class="btn btn-sm btn-outline-primary me-1 editCourtBtn"
                                             data-id="<?php echo $court['id']; ?>"
                                             data-name="<?php echo escape($court['name']); ?>"
@@ -228,7 +290,8 @@ require_once __DIR__ . '/../includes/header.php';
                                             data-price="<?php echo $court['price_per_hour']; ?>"
                                             data-image="<?php echo escape($court['cover_image']); ?>"
                                             data-description="<?php echo escape($court['description']); ?>"
-                                            data-featured="<?php echo $isFeatured ? '1' : '0'; ?>">
+                                            data-featured="<?php echo $isFeatured ? '1' : '0'; ?>"
+                                            data-category="<?php echo escape($court['category'] ?? ''); ?>">
                                             <i class="fas fa-edit"></i> Sửa
                                         </button>
                                         <form method="post" class="d-inline" onsubmit="return confirm('Xóa sân này?');">
@@ -262,6 +325,13 @@ document.querySelectorAll('.editCourtBtn').forEach(btn => {
         document.getElementById('court_description').value = btn.dataset.description;
         document.getElementById('court_featured').checked  = btn.dataset.featured === '1';
 
+        // Populate category checkboxes
+        const cats = (btn.dataset.category || '').split(',');
+        ['premium','popular','new','promo'].forEach(c => {
+            const el = document.getElementById('cat_' + c);
+            if (el) el.checked = cats.includes(c);
+        });
+
         document.getElementById('formTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Sửa sân: ' + btn.dataset.name;
         document.getElementById('submitBtn').innerHTML  = '<i class="fas fa-save me-2"></i>Cập nhật sân';
 
@@ -278,6 +348,10 @@ function resetForm() {
     document.getElementById('formTitle').innerHTML = '<i class="fas fa-plus me-2"></i>Thêm sân mới';
     document.getElementById('submitBtn').innerHTML  = '<i class="fas fa-save me-2"></i>Lưu sân';
     document.getElementById('imagePreview').classList.add('d-none');
+    ['premium','popular','new','promo'].forEach(c => {
+        const el = document.getElementById('cat_' + c);
+        if (el) el.checked = false;
+    });
 }
 
 // Preview ảnh

@@ -474,9 +474,86 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // For MoMo or VNPay: show payment confirmation modal first
+        if (paymentMethod === 'momo' || paymentMethod === 'vnpay') {
+            showPaymentConfirmModal(paymentMethod);
+            return;
+        }
+
+        // COD or other: proceed directly
+        submitBooking(paymentMethod, this);
+    });
+
+    // Show the payment confirmation modal with correct info
+    function showPaymentConfirmModal(paymentMethod) {
+        const modal = document.getElementById('paymentConfirmModal');
+        if (!modal) {
+            // Fallback: just submit if modal not found
+            const paymentMethod2 = document.querySelector('input[name="paymentMethod"]:checked')?.value;
+            submitBooking(paymentMethod2, document.getElementById('confirmBooking'));
+            return;
+        }
+
+        // Generate a booking reference for display
+        const bookingRef = 'BK-' + Date.now().toString(36).toUpperCase().slice(-6);
+
+        // Reset checkbox and button state
+        const cb    = document.getElementById('confirmTransferCheck');
+        const pmBtn = document.getElementById('pmConfirmBtn');
+        if (cb)    { cb.checked = false; }
+        if (pmBtn) { pmBtn.disabled = true; pmBtn.style.opacity = '0.5'; }
+
+        const momoPanel = document.getElementById('pmMomoPanel');
+        const bankPanel = document.getElementById('pmBankPanel');
+        const icon      = document.getElementById('pmModalIcon');
+        const title     = document.getElementById('pmModalTitle');
+        const header    = document.getElementById('paymentConfirmModalHeader');
+
+        if (paymentMethod === 'momo') {
+            if (momoPanel) momoPanel.style.display = 'block';
+            if (bankPanel) bankPanel.style.display = 'none';
+            if (icon)   icon.className = 'fas fa-wallet me-2';
+            if (title)  title.textContent = 'Thanh toán qua MoMo';
+            if (header) header.style.background = '#fdf2f8';
+            const momoRef = document.getElementById('pmMomoRef');
+            if (momoRef) momoRef.textContent = bookingRef;
+        } else {
+            if (momoPanel) momoPanel.style.display = 'none';
+            if (bankPanel) bankPanel.style.display = 'block';
+            if (icon)   icon.className = 'fas fa-university me-2';
+            if (title)  title.textContent = 'Chuyển khoản ngân hàng (VNPay)';
+            if (header) header.style.background = '#fffdf0';
+            const bankRef = document.getElementById('pmBankRef');
+            if (bankRef) bankRef.textContent = bookingRef;
+        }
+
+        // Store paymentMethod for use after confirmation
+        window._pendingPaymentMethod = paymentMethod;
+
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+    }
+
+    // Called when user confirms payment in modal
+    window.proceedBookingAfterPayment = function() {
+        // Hide the modal
+        const modal = document.getElementById('paymentConfirmModal');
+        if (modal) {
+            const bsModal = bootstrap.Modal.getInstance(modal);
+            if (bsModal) bsModal.hide();
+        }
+        const pm  = window._pendingPaymentMethod || 'momo';
+        const btn = document.getElementById('confirmBooking');
+        submitBooking(pm, btn);
+    };
+
+    // Core booking submission function (extracted from the click handler)
+    function submitBooking(paymentMethod, btn) {
         // Show loading
-        this.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Đang xử lý...';
-        this.disabled = true;
+        if (btn) {
+            btn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Đang xử lý...';
+            btn.disabled = true;
+        }
 
         // Prepare booking data
         const bookingData = {
@@ -528,8 +605,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 successModal.show();
 
                 // Reset nút
-                this.innerHTML = '<i class="fas fa-check me-2"></i>Xác nhận đặt sân';
-                this.disabled  = false;
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-check me-2"></i>Xác nhận đặt sân';
+                    btn.disabled  = false;
+                }
 
                 // Redirect sang lịch sử sau 3 giây
                 setTimeout(() => { window.location.href = 'booking-history.php'; }, 3000);
@@ -543,10 +622,12 @@ document.addEventListener('DOMContentLoaded', function() {
             showAlert('Có lỗi xảy ra khi đặt sân. Vui lòng thử lại.', 'error');
             
             // Reset button
-            this.innerHTML = '<i class="fas fa-check me-2"></i>Xác nhận đặt sân';
-            this.disabled = false;
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-check me-2"></i>Xác nhận đặt sân';
+                btn.disabled = false;
+            }
         });
-    });
+    }
 
     // Alert helper function
     function showAlert(message, type = 'info') {

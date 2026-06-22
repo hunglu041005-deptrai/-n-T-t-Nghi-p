@@ -7,21 +7,26 @@ blockAdminFromPublic();
 // Get filter parameters
 $filters = [
     'category' => $_GET['category'] ?? '',
-    'rating' => $_GET['rating'] ?? '',
-    'price' => $_GET['price'] ?? '',
+    'rating'   => $_GET['rating']   ?? '',
+    'price'    => $_GET['price']    ?? '',
     'location' => $_GET['location'] ?? ''
 ];
 
-$courts = getCourts($filters);
+$courts    = getCourts($filters);
 $locations = getLocations();
 
-// Lấy sân được đánh dấu nổi bật từ database
-$featuredCourts = array_filter($courts, fn($c) => !empty($c['featured']));
+// getCourts() now filters by DB category column
+$featuredCourts = $courts;
 
-// Nếu không có sân nổi bật thì lấy tất cả
-if (empty($featuredCourts)) {
-    $featuredCourts = $courts;
-}
+// Meta thông tin cho từng category
+$categoryMeta = [
+    'premium' => ['label' => 'Sân cao cấp',   'icon' => 'fa-crown',    'desc' => 'Những sân chất lượng cao cấp, tiện nghi đầy đủ'],
+    'popular' => ['label' => 'Phổ biến nhất', 'icon' => 'fa-fire',     'desc' => 'Sân được đặt nhiều nhất và đánh giá tốt nhất'],
+    'new'     => ['label' => 'Mới nhất',       'icon' => 'fa-sparkles', 'desc' => 'Sân mới được thêm vào hệ thống'],
+    'promo'   => ['label' => 'Khuyến mãi',     'icon' => 'fa-percent',  'desc' => 'Sân có giá ưu đãi, tiết kiệm chi phí'],
+    ''        => ['label' => 'Nổi bật',        'icon' => 'fa-star',     'desc' => 'Những sân được đánh giá cao và yêu thích nhất'],
+];
+$currentMeta = $categoryMeta[$filters['category']] ?? $categoryMeta[''];
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -31,8 +36,11 @@ require_once __DIR__ . '/includes/header.php';
     <div class="container">
         <div class="row align-items-center">
             <div class="col-md-8">
-                <h1 class="h3 mb-2">⭐ Sân cầu lông nổi bật</h1>
-                <p class="mb-0 opacity-75">Những sân được đánh giá cao nhất và được khách hàng yêu thích</p>
+                <h1 class="h3 mb-2">
+                    <i class="fas <?php echo $currentMeta['icon']; ?> me-2"></i>
+                    <?php echo escape($currentMeta['label']); ?>
+                </h1>
+                <p class="mb-0 opacity-75"><?php echo escape($currentMeta['desc']); ?></p>
             </div>
             <div class="col-md-4 text-md-end">
                 <a href="index.php" class="btn btn-dark">
@@ -51,10 +59,10 @@ require_once __DIR__ . '/includes/header.php';
                 <label class="form-label fw-bold">Danh mục</label>
                 <select name="category" class="form-select">
                     <option value="">Tất cả</option>
-                    <option value="premium" <?php echo $filters['category'] === 'premium' ? 'selected' : ''; ?>>Sân cao cấp</option>
-                    <option value="popular" <?php echo $filters['category'] === 'popular' ? 'selected' : ''; ?>>Phổ biến nhất</option>
-                    <option value="new" <?php echo $filters['category'] === 'new' ? 'selected' : ''; ?>>Mới nhất</option>
-                    <option value="promo" <?php echo $filters['category'] === 'promo' ? 'selected' : ''; ?>>Khuyến mãi</option>
+                    <option value="premium" <?php echo $filters['category'] === 'premium' ? 'selected' : ''; ?>>👑 Sân cao cấp</option>
+                    <option value="popular" <?php echo $filters['category'] === 'popular' ? 'selected' : ''; ?>>🔥 Phổ biến nhất</option>
+                    <option value="new"     <?php echo $filters['category'] === 'new'     ? 'selected' : ''; ?>>✨ Mới nhất</option>
+                    <option value="promo"   <?php echo $filters['category'] === 'promo'   ? 'selected' : ''; ?>>% Khuyến mãi</option>
                 </select>
             </div>
             <div class="col-sm-6 col-md-2">
@@ -115,12 +123,19 @@ require_once __DIR__ . '/includes/header.php';
                             <div class="col-6 col-md-3">
                                 <div class="stat-item">
                                     <div class="h4 fw-bold text-warning mb-1"><?php echo count($featuredCourts); ?></div>
-                                    <small class="text-muted">Sân nổi bật</small>
+                                    <small class="text-muted"><?php echo escape($currentMeta['label']); ?></small>
                                 </div>
                             </div>
                             <div class="col-6 col-md-3">
                                 <div class="stat-item">
-                                    <div class="h4 fw-bold text-success mb-1">4.8</div>
+                                    <?php
+                                    $avgRating = 0;
+                                    if (!empty($featuredCourts)) {
+                                        $ratings = array_column(array_values($featuredCourts), 'avg_rating');
+                                        $avgRating = round(array_sum($ratings) / count($ratings), 1);
+                                    }
+                                    ?>
+                                    <div class="h4 fw-bold text-success mb-1"><?php echo $avgRating ?: 'N/A'; ?></div>
                                     <small class="text-muted">Đánh giá TB</small>
                                 </div>
                             </div>
@@ -159,8 +174,18 @@ require_once __DIR__ . '/includes/header.php';
                                         
                                         <!-- Badges -->
                                         <div class="position-absolute top-0 start-0 m-2">
-                                            <span class="badge bg-warning text-dark mb-1">
-                                                <i class="fas fa-star me-1"></i>Nổi bật
+                                            <?php
+                                            $badgeMap = [
+                                                'premium' => ['bg-warning text-dark', 'fa-crown',    'Cao cấp'],
+                                                'popular' => ['bg-danger text-white',  'fa-fire',     'Phổ biến'],
+                                                'new'     => ['bg-info text-white',    'fa-sparkles', 'Mới nhất'],
+                                                'promo'   => ['bg-success text-white', 'fa-percent',  'Khuyến mãi'],
+                                                ''        => ['bg-warning text-dark',  'fa-star',     'Nổi bật'],
+                                            ];
+                                            $b = $badgeMap[$filters['category']] ?? $badgeMap[''];
+                                            ?>
+                                            <span class="badge <?php echo $b[0]; ?> mb-1">
+                                                <i class="fas <?php echo $b[1]; ?> me-1"></i><?php echo $b[2]; ?>
                                             </span>
                                             <br>
                                             <span class="badge bg-success">
@@ -206,15 +231,14 @@ require_once __DIR__ . '/includes/header.php';
                                         <div class="rating-section mb-3">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <div class="rating">
-                                                    <i class="fas fa-star text-warning"></i>
-                                                    <i class="fas fa-star text-warning"></i>
-                                                    <i class="fas fa-star text-warning"></i>
-                                                    <i class="fas fa-star text-warning"></i>
-                                                    <i class="fas fa-star text-warning"></i>
-                                                    <small class="text-muted ms-1">(4.8)</small>
+                                                    <?php
+                                                    $r = (float)($court['avg_rating'] ?? 0);
+                                                    echo renderStars($r);
+                                                    ?>
+                                                    <small class="text-muted ms-1">(<?php echo $r > 0 ? number_format($r, 1) : 'Chưa có'; ?>)</small>
                                                 </div>
                                                 <small class="text-muted">
-                                                    <i class="fas fa-users me-1"></i>150+ đặt
+                                                    <i class="fas fa-comments me-1"></i><?php echo (int)($court['review_count'] ?? 0); ?> đánh giá
                                                 </small>
                                             </div>
                                         </div>
@@ -276,45 +300,58 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="sidebar-section mb-4">
                         <h6 class="fw-bold mb-3">🏆 Danh mục nổi bật</h6>
                         <div class="d-grid gap-2">
-                            <a href="featured.php?category=premium" class="btn btn-outline-warning btn-sm text-start">
-                                <i class="fas fa-crown me-2"></i>Sân cao cấp
+                            <?php
+                            $sidebarCategories = [
+                                'premium' => ['fa-crown',    'Sân cao cấp'],
+                                'popular' => ['fa-fire',     'Phổ biến nhất'],
+                                'new'     => ['fa-sparkles', 'Mới nhất'],
+                                'promo'   => ['fa-percent',  'Khuyến mãi'],
+                            ];
+                            foreach ($sidebarCategories as $catKey => $catInfo):
+                                $isActive = $filters['category'] === $catKey;
+                            ?>
+                            <a href="featured.php?category=<?php echo $catKey; ?>"
+                               class="btn btn-sm text-start <?php echo $isActive ? 'btn-warning fw-bold' : 'btn-outline-warning'; ?>">
+                                <i class="fas <?php echo $catInfo[0]; ?> me-2"></i><?php echo $catInfo[1]; ?>
+                                <?php if ($isActive): ?>
+                                    <i class="fas fa-check ms-auto float-end mt-1"></i>
+                                <?php endif; ?>
                             </a>
-                            <a href="featured.php?category=popular" class="btn btn-outline-warning btn-sm text-start">
-                                <i class="fas fa-fire me-2"></i>Phổ biến nhất
+                            <?php endforeach; ?>
+                            <?php if ($filters['category'] !== ''): ?>
+                            <a href="featured.php" class="btn btn-outline-secondary btn-sm text-start">
+                                <i class="fas fa-times me-2"></i>Xem tất cả
                             </a>
-                            <a href="featured.php?category=new" class="btn btn-outline-warning btn-sm text-start">
-                                <i class="fas fa-sparkles me-2"></i>Mới nhất
-                            </a>
-                            <a href="featured.php?category=promo" class="btn btn-outline-warning btn-sm text-start">
-                                <i class="fas fa-percent me-2"></i>Khuyến mãi
-                            </a>
+                            <?php endif; ?>
                         </div>
                     </div>
                     
                     <!-- Top Rated -->
                     <div class="sidebar-section mb-4">
                         <h6 class="fw-bold mb-3">⭐ Top đánh giá</h6>
-                        <?php 
-                        $topRated = array_slice($featuredCourts, 0, 3);
-                        foreach ($topRated as $court): 
+                        <?php
+                        // Lấy top 3 theo avg_rating từ toàn bộ sân
+                        $allCourts = getCourts(['sort' => 'rating']);
+                        $topRated  = array_slice($allCourts, 0, 3);
+                        foreach ($topRated as $court):
+                            $r = (float)($court['avg_rating'] ?? 0);
                         ?>
                             <div class="top-rated-item mb-3 p-2 bg-white rounded">
-                                <div class="d-flex">
-                                    <img src="<?php echo escape($court['cover_image']); ?>" 
-                                         class="rounded me-2" style="width: 50px; height: 50px; object-fit: cover;" 
-                                         alt="<?php echo escape($court['name']); ?>">
-                                    <div class="flex-grow-1">
-                                        <div class="fw-bold small"><?php echo escape($court['name']); ?></div>
-                                        <div class="text-muted small"><?php echo escape($court['location']); ?></div>
-                                        <div class="rating small">
-                                            <i class="fas fa-star text-warning"></i>
-                                            <i class="fas fa-star text-warning"></i>
-                                            <i class="fas fa-star text-warning"></i>
-                                            <i class="fas fa-star text-warning"></i>
-                                            <i class="fas fa-star text-warning"></i>
+                                <a href="booking-online.php?court_id=<?php echo $court['id']; ?>" class="text-decoration-none text-dark">
+                                    <div class="d-flex">
+                                        <img src="<?php echo escape($court['cover_image']); ?>" 
+                                             class="rounded me-2" style="width: 50px; height: 50px; object-fit: cover;" 
+                                             alt="<?php echo escape($court['name']); ?>">
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold small"><?php echo escape($court['name']); ?></div>
+                                            <div class="text-muted small"><?php echo escape($court['location']); ?></div>
+                                            <div class="small">
+                                                <?php echo renderStars($r); ?>
+                                                <span class="text-muted ms-1"><?php echo $r > 0 ? number_format($r, 1) : 'Mới'; ?></span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                </a>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -322,18 +359,60 @@ require_once __DIR__ . '/includes/header.php';
                     <!-- Special Offers -->
                     <div class="sidebar-section">
                         <h6 class="fw-bold mb-3">🎁 Ưu đãi đặc biệt</h6>
-                        <div class="offer-card bg-gradient-warning text-dark p-3 rounded mb-3">
-                            <div class="fw-bold">Giảm 30% Happy Hour</div>
-                            <small>14:00 - 17:00 hàng ngày</small>
+                        <?php
+                        // Tạo bảng nếu chưa có
+                        $mysqli->query("CREATE TABLE IF NOT EXISTS promotions (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            title VARCHAR(150) NOT NULL,
+                            description VARCHAR(255),
+                            color_from VARCHAR(20) DEFAULT '#f472b6',
+                            color_to VARCHAR(20) DEFAULT '#ef4444',
+                            text_color VARCHAR(20) DEFAULT '#fff',
+                            discount_pct TINYINT DEFAULT 0,
+                            time_start TIME DEFAULT NULL,
+                            time_end TIME DEFAULT NULL,
+                            apply_weekend TINYINT DEFAULT 0,
+                            apply_newuser TINYINT DEFAULT 0,
+                            status TINYINT DEFAULT 1,
+                            sort_order INT DEFAULT 0,
+                            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+                        $promos = $mysqli->query(
+                            'SELECT * FROM promotions WHERE status=1 ORDER BY sort_order ASC, id DESC'
+                        )->fetch_all(MYSQLI_ASSOC);
+
+                        if (empty($promos)):
+                            // Fallback mặc định nếu chưa có data
+                            $promos = [
+                                ['title'=>'Giảm 30% Happy Hour',  'description'=>'14:00 - 17:00 hàng ngày',  'color_from'=>'#f472b6','color_to'=>'#ef4444','text_color'=>'#1a1a2e','discount_pct'=>30],
+                                ['title'=>'Tích điểm x2',          'description'=>'Cuối tuần và lễ tết',       'color_from'=>'#4ade80','color_to'=>'#22c55e','text_color'=>'#fff','discount_pct'=>0],
+                                ['title'=>'Miễn phí lần đầu',      'description'=>'Cho thành viên mới',        'color_from'=>'#38bdf8','color_to'=>'#06b6d4','text_color'=>'#fff','discount_pct'=>100],
+                            ];
+                        endif;
+                        ?>
+                        <?php foreach ($promos as $promo): ?>
+                        <div class="offer-card p-3 rounded mb-3"
+                             style="background:linear-gradient(135deg,<?php echo escape($promo['color_from']); ?>,<?php echo escape($promo['color_to']); ?>);color:<?php echo escape($promo['text_color']); ?>;">
+                            <div class="fw-bold"><?php echo escape($promo['title']); ?></div>
+                            <?php if (!empty($promo['description'])): ?>
+                                <small style="opacity:.85;"><?php echo escape($promo['description']); ?></small>
+                            <?php endif; ?>
+                            <?php if (!empty($promo['discount_pct']) && $promo['discount_pct'] > 0): ?>
+                                <div class="mt-1">
+                                    <span style="background:rgba(255,255,255,.25);border-radius:6px;padding:2px 8px;font-size:.7rem;font-weight:700;">
+                                        -<?php echo $promo['discount_pct']; ?>%
+                                    </span>
+                                </div>
+                            <?php endif; ?>
                         </div>
-                        <div class="offer-card bg-gradient-success text-white p-3 rounded mb-3">
-                            <div class="fw-bold">Tích điểm x2</div>
-                            <small>Cuối tuần và lễ tết</small>
-                        </div>
-                        <div class="offer-card bg-gradient-info text-white p-3 rounded">
-                            <div class="fw-bold">Miễn phí lần đầu</div>
-                            <small>Cho thành viên mới</small>
-                        </div>
+                        <?php endforeach; ?>
+
+                        <?php if (isAdmin()): ?>
+                        <a href="../admin/promotions.php" class="btn btn-sm btn-outline-warning w-100 mt-1">
+                            <i class="fas fa-cog me-1"></i>Quản lý ưu đãi
+                        </a>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

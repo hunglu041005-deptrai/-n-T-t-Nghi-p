@@ -167,23 +167,25 @@ require_once __DIR__ . '/includes/header.php';
                                     
                                     <div class="mb-3">
                                         <strong>Người nhận:</strong><br>
-                                        <span class="text-muted"><?php echo htmlspecialchars($order_detail['shipping_name']); ?></span>
+                                        <span class="text-muted"><?php echo htmlspecialchars($order_detail['customer_name'] ?? $order_detail['shipping_name'] ?? ''); ?></span>
                                     </div>
                                     
                                     <div class="mb-3">
                                         <strong>Số điện thoại:</strong><br>
-                                        <span class="text-muted"><?php echo htmlspecialchars($order_detail['shipping_phone']); ?></span>
+                                        <span class="text-muted"><?php echo htmlspecialchars($order_detail['customer_phone'] ?? $order_detail['shipping_phone'] ?? ''); ?></span>
                                     </div>
                                     
                                     <div class="mb-3">
                                         <strong>Địa chỉ:</strong><br>
-                                        <span class="text-muted"><?php echo nl2br(htmlspecialchars($order_detail['shipping_address'])); ?></span>
+                                        <span class="text-muted"><?php echo nl2br(htmlspecialchars($order_detail['shipping_address'] ?? '')); ?></span>
                                     </div>
                                     
-                                    <?php if ($order_detail['order_note']): ?>
+                                    <?php
+                                    $orderNote = $order_detail['notes'] ?? $order_detail['order_note'] ?? '';
+                                    if ($orderNote): ?>
                                         <div class="mb-3">
                                             <strong>Ghi chú:</strong><br>
-                                            <span class="text-muted"><?php echo nl2br(htmlspecialchars($order_detail['order_note'])); ?></span>
+                                            <span class="text-muted"><?php echo nl2br(htmlspecialchars($orderNote)); ?></span>
                                         </div>
                                     <?php endif; ?>
                                 </div>

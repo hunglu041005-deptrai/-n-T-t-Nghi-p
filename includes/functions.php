@@ -60,8 +60,32 @@ function getCourts($filters = []) {
         }
     }
 
+    // Lọc theo danh mục (DB-level)
+    if (!empty($filters['category'])) {
+        $catVal = '%' . $filters['category'] . '%';
+        $sql .= ' AND c.category LIKE ?';
+        $params[] = &$catVal;
+        $types .= 's';
+    }
+
+    // Lọc theo đánh giá (dùng HAVING vì avg_rating là aggregate)
+    $havingClauses = [];
+    if (!empty($filters['rating'])) {
+        $ratingVal = (float)$filters['rating'];
+        $havingClauses[] = 'avg_rating >= ' . $ratingVal;
+    }
+
+    // Lọc theo danh mục nổi bật
+    $category = $filters['category'] ?? '';
     $sort = $filters['sort'] ?? '';
+
     $sql .= ' GROUP BY c.id';
+
+    if (!empty($havingClauses)) {
+        $sql .= ' HAVING ' . implode(' AND ', $havingClauses);
+    }
+
+    // Xác định ORDER BY dựa trên sort
     if ($sort === 'price_asc') {
         $sql .= ' ORDER BY c.price_per_hour ASC';
     } elseif ($sort === 'price_desc') {
