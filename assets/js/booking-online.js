@@ -474,13 +474,23 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // For MoMo or VNPay: show payment confirmation modal first
-        if (paymentMethod === 'momo' || paymentMethod === 'vnpay') {
-            showPaymentConfirmModal(paymentMethod);
-            return;
+        // Kiểm tra checkbox xác nhận chuyển khoản (inline panels trong booking-online.php)
+        if (paymentMethod === 'momo') {
+            const cb = document.getElementById('bookingMomoConfirm');
+            if (cb && !cb.checked) {
+                showAlert('Vui lòng xác nhận đã chuyển khoản qua MoMo', 'warning');
+                return;
+            }
+        }
+        if (paymentMethod === 'vnpay') {
+            const cb = document.getElementById('bookingBankConfirm');
+            if (cb && !cb.checked) {
+                showAlert('Vui lòng xác nhận đã chuyển khoản ngân hàng', 'warning');
+                return;
+            }
         }
 
-        // COD or other: proceed directly
+        // Tất cả hợp lệ → submit thẳng (không cần modal nữa)
         submitBooking(paymentMethod, this);
     });
 

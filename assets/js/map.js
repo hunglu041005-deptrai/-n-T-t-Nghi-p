@@ -149,7 +149,9 @@ class CourtMap {
                 <p class="mb-1"><strong>Khu vực:</strong> ${court.location}</p>
                 <p class="mb-1"><strong>Giá:</strong> ${this.formatPrice(court.price_per_hour)}/giờ</p>
                 <p class="mb-2"><strong>Trạng thái:</strong> <span class="badge bg-${this.getStatusBadgeClass(court.status)}">${this.getStatusText(court.status)}</span></p>
-                <a href="court.php?id=${court.id}" class="btn btn-primary btn-sm">Xem chi tiết</a>
+                <a href="booking-online.php?court_id=${court.id}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-calendar-check me-1"></i>Đặt sân ngay
+                </a>
             </div>
         `;
         
@@ -190,8 +192,8 @@ class CourtMap {
                     <span class="court-status status-${court.status}">${this.getStatusText(court.status)}</span>
                 </div>
                 <div class="d-grid gap-2">
-                    <a href="court.php?id=${court.id}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-eye me-2"></i>Xem chi tiết
+                    <a href="booking-online.php?court_id=${court.id}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-calendar-check me-2"></i>Xem chi tiết & Đặt sân
                     </a>
                     <button type="button" class="btn btn-outline-primary btn-sm" onclick="courtMap.centerOnCourt(${court.lat}, ${court.lng})">
                         <i class="fas fa-crosshairs me-2"></i>Định vị trên bản đồ

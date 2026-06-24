@@ -27,6 +27,22 @@ if (!$student) {
     exit;
 }
 
+// Log attendance check-in (create table if needed)
+$mysqli->query("CREATE TABLE IF NOT EXISTS attendance_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_code VARCHAR(30) NOT NULL,
+    coach_id INT DEFAULT NULL,
+    scanned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_code (student_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+// Insert check-in record
+$logStmt = $mysqli->prepare('INSERT INTO attendance_logs (student_code, coach_id) VALUES (?,?)');
+$coachIdForLog = $student['coach_id'] ?? null;
+$logStmt->bind_param('si', $code, $coachIdForLog);
+$logStmt->execute();
+$logStmt->close();
+
 $course_labels = [
     'beginner'     => 'Cơ bản (3 tháng)',
     'intermediate' => 'Trung cấp (4 tháng)',

@@ -16,24 +16,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
-        if (!$user || !password_verify($password, $user['password'])) {
+        if (!$user) {
             $error = 'Email hoặc mật khẩu không đúng.';
         } elseif ($user['status'] != 1) {
             $error = 'Tài khoản đang bị khóa. Liên hệ hỗ trợ.';
         } else {
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['name']    = $user['name'];
-            $_SESSION['email']   = $user['email'];
-            $_SESSION['role']    = $user['role'];
+            // Kiểm tra mật khẩu: hỗ trợ cả bcrypt lẫn plain text
+            $pwOk = false;
+            if (password_verify($password, $user['password'])) {
+                $pwOk = true;
+            } elseif ($user['password'] === $password) {
+                // Plain text — tự động hash lại
+                $newHash = password_hash($password, PASSWORD_DEFAULT);
+                $upd = $mysqli->prepare('UPDATE users SET password=? WHERE id=?');
+                $upd->bind_param('si', $newHash, $user['id']);
+                $upd->execute();
+                $upd->close();
+                $pwOk = true;
+            }
 
-            if ($user['role'] === 'admin') {
-                header('Location: admin/dashboard.php'); exit;
-            } elseif ($user['role'] === 'coach') {
-                header('Location: coach/dashboard.php'); exit;
+            if (!$pwOk) {
+                $error = 'Email hoặc mật khẩu không đúng.';
             } else {
-                $redirect = $_GET['redirect'] ?? 'index.php';
-                header('Location: ' . (strpos($redirect, 'http') === false ? $redirect : 'index.php'));
-                exit;
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['name']    = $user['name'];
+                $_SESSION['email']   = $user['email'];
+                $_SESSION['role']    = $user['role'];
+
+                if ($user['role'] === 'admin') {
+                    header('Location: admin/dashboard.php'); exit;
+                } elseif ($user['role'] === 'coach') {
+                    header('Location: coach/dashboard.php'); exit;
+                } else {
+                    $redirect = $_GET['redirect'] ?? 'index.php';
+                    header('Location: ' . (strpos($redirect, 'http') === false ? $redirect : 'index.php'));
+                    exit;
+                }
             }
         }
     }

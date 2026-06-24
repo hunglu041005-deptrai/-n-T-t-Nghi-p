@@ -228,8 +228,8 @@ class FullScreenCourtMap {
                     </div>
                 </div>
                 <div class="popup-footer d-grid gap-1">
-                    <a href="court.php?id=${court.id}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-eye me-1"></i>Xem chi tiết
+                    <a href="booking-online.php?court_id=${court.id}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-calendar-check me-1"></i>Đặt sân ngay
                     </a>
                     <button type="button" class="btn btn-outline-primary btn-sm" onclick="fullScreenMap.centerOnCourt(${court.lat}, ${court.lng})">
                         <i class="fas fa-crosshairs me-1"></i>Định vị
@@ -294,8 +294,8 @@ class FullScreenCourtMap {
                 </div>
                 
                 <div class="court-actions d-grid gap-2">
-                    <a href="court.php?id=${court.id}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-eye me-2"></i>Xem chi tiết & Đặt sân
+                    <a href="booking-online.php?court_id=${court.id}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-calendar-check me-2"></i>Xem chi tiết & Đặt sân
                     </a>
                     <button type="button" class="btn btn-outline-primary btn-sm" onclick="fullScreenMap.centerOnCourt(${court.lat}, ${court.lng})">
                         <i class="fas fa-crosshairs me-2"></i>Định vị trên bản đồ

@@ -350,14 +350,48 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
             <div class="col-6 col-md-3">
                 <div class="stat-card">
-                    <div class="stat-number text-info">3</div>
+                    <?php
+$sessions_per_week = $coach['sessions_per_week'] ?? 3;
+// If column doesn't exist, default to 3
+?>
+                    <div class="stat-number text-info"><?php echo $sessions_per_week; ?></div>
                     <div style="color:#6b7280;font-size:.85rem;">Buổi/tuần/học viên</div>
                 </div>
             </div>
         </div>
 
+        <?php
+// Count pending students (status = 'pending_payment')
+$pending_stmt = $mysqli->prepare("SELECT COUNT(*) AS cnt FROM training_registrations WHERE coach_id = ? AND status = 'pending_payment'");
+$pending_stmt->bind_param('i', $coach_id);
+$pending_stmt->execute();
+$pending_count = $pending_stmt->get_result()->fetch_assoc()['cnt'] ?? 0;
+$pending_stmt->close();
+
+// Active students total
+$active_stmt = $mysqli->prepare("SELECT COUNT(*) AS cnt FROM training_registrations WHERE coach_id = ? AND status = 'active'");
+$active_stmt->bind_param('i', $coach_id);
+$active_stmt->execute();
+$active_count = $active_stmt->get_result()->fetch_assoc()['cnt'] ?? 0;
+$active_stmt->close();
+?>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-number" style="color:#f59e0b;"><?php echo $pending_count; ?></div>
+            <div style="color:#6b7280;font-size:.85rem;">Chờ thanh toán</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-number" style="color:#10b981;"><?php echo $active_count; ?></div>
+            <div style="color:#6b7280;font-size:.85rem;">HV đang học</div>
+        </div>
+    </div>
+</div>
+
         <!-- Tabs -->
-        <div style="background:#fff;border-radius:14px;padding:.5rem;margin-bottom:1.5rem;box-shadow:0 2px 10px rgba(0,0,0,.06);display:inline-flex;gap:.25rem;">
+        <div style="background:#fff;border-radius:14px;padding:.5rem;margin-bottom:1.5rem;box-shadow:0 2px 10px rgba(0,0,0,.06);display:inline-flex;gap:.25rem;flex-wrap:wrap;">
             <button class="tab-btn active" onclick="switchTab('week', this)">
                 <i class="fas fa-calendar-week me-2"></i>Tuần này
             </button>
@@ -366,6 +400,9 @@ require_once __DIR__ . '/../includes/header.php';
             </button>
             <button class="tab-btn" onclick="switchTab('schedule', this)">
                 <i class="fas fa-calendar-alt me-2"></i>Lịch học
+            </button>
+            <button class="tab-btn" onclick="switchTab('finance', this)">
+                <i class="fas fa-wallet me-2"></i>Tài chính
             </button>
             <button class="tab-btn" onclick="switchTab('scan', this)">
                 <i class="fas fa-qrcode me-2"></i>Quét QR
@@ -421,6 +458,11 @@ require_once __DIR__ . '/../includes/header.php';
                             <i class="fas fa-qrcode me-1"></i>QR
                         </button>
                         <div class="text-muted mt-1" style="font-size:.72rem;"><?php echo $s['registered_at_fmt']; ?></div>
+                        <?php
+$statusLabel = ['active'=>['✅','#10b981'],'pending_payment'=>['⏳','#f59e0b'],'cancelled'=>['❌','#ef4444']];
+$st = $statusLabel[$s['status'] ?? 'pending_payment'] ?? ['?','#9ca3af'];
+?>
+                        <div style="font-size:.72rem;margin-top:4px;color:<?php echo $st[1]; ?>;font-weight:700;"><?php echo $st[0]; ?> <?php echo ucfirst($s['status'] ?? 'pending'); ?></div>
                     </div>
                 </div>
             </div>
@@ -483,7 +525,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div id="tab-schedule" style="display:none;">
             <h5 class="fw-bold mb-4">Lịch học tuần <?php echo $weekLabel; ?></h5>
             <?php
-            $dayMap = ['Mon'=>'Thứ 2','Tue'=>'Thứ 3','Wed'=>'Thứ 4','Thu'=>'Thứ 5','Fri'=>'Thứ 6','Sat'=>'Thứ 7'];
+            $dayMap = ['Mon'=>'Thứ 2','Tue'=>'Thứ 3','Wed'=>'Thứ 4','Thu'=>'Thứ 5','Fri'=>'Thứ 6','Sat'=>'Thứ 7','Sun'=>'Chủ nhật'];
             $scheduleGrid = [];
             foreach ($students as $s) {
                 $days = array_map('trim', explode(',', $s['schedule_days'] ?? ''));
@@ -518,6 +560,141 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
         </div>
 
+        <!-- Tab: Tài chính -->
+        <div id="tab-finance" style="display:none;">
+            <?php
+            $course_prices = ['beginner'=>1800000,'intermediate'=>2800000,'advanced'=>4500000];
+            $course_labels = ['beginner'=>'Cơ bản','intermediate'=>'Trung cấp','advanced'=>'Nâng cao'];
+
+            // Tổng doanh thu từ học viên active
+            $total_revenue = 0;
+            $pending_revenue = 0;
+            foreach ($all_students as $s) {
+                $price = $course_prices[$s['course']] ?? 0;
+                if (($s['status'] ?? '') === 'active') $total_revenue += $price;
+                elseif (($s['status'] ?? '') === 'pending_payment') $pending_revenue += $price;
+            }
+            ?>
+
+            <!-- Tổng quan tài chính -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:16px;padding:1.5rem;color:#fff;">
+                        <div style="font-size:.82rem;opacity:.8;margin-bottom:.3rem;"><i class="fas fa-check-circle me-1"></i>Đã thanh toán</div>
+                        <div style="font-size:1.8rem;font-weight:900;"><?php echo number_format($total_revenue); ?>đ</div>
+                        <div style="font-size:.75rem;opacity:.7;margin-top:.3rem;"><?php echo $active_count ?? 0; ?> học viên active</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:16px;padding:1.5rem;color:#fff;">
+                        <div style="font-size:.82rem;opacity:.8;margin-bottom:.3rem;"><i class="fas fa-clock me-1"></i>Chờ thanh toán</div>
+                        <div style="font-size:1.8rem;font-weight:900;"><?php echo number_format($pending_revenue); ?>đ</div>
+                        <div style="font-size:.75rem;opacity:.7;margin-top:.3rem;"><?php echo $pending_count ?? 0; ?> học viên chờ</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px;padding:1.5rem;color:#fff;">
+                        <div style="font-size:.82rem;opacity:.8;margin-bottom:.3rem;"><i class="fas fa-coins me-1"></i>Tổng dự kiến</div>
+                        <div style="font-size:1.8rem;font-weight:900;"><?php echo number_format($total_revenue + $pending_revenue); ?>đ</div>
+                        <div style="font-size:.75rem;opacity:.7;margin-top:.3rem;"><?php echo count($all_students); ?> học viên</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Thông tin tài khoản nhận tiền -->
+            <div style="background:linear-gradient(135deg,#0f0c29,#1e3a5f);border-radius:16px;padding:1.5rem;margin-bottom:1.5rem;color:#fff;">
+                <div style="font-weight:800;font-size:1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.6rem;">
+                    <i class="fas fa-university" style="color:#fbbf24;"></i> Tài khoản nhận học phí
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;font-size:.88rem;">
+                    <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:.9rem 1.1rem;">
+                        <div style="color:rgba(255,255,255,.55);font-size:.72rem;margin-bottom:.3rem;">Ngân hàng</div>
+                        <div style="font-weight:800;">MB Bank</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:.9rem 1.1rem;">
+                        <div style="color:rgba(255,255,255,.55);font-size:.72rem;margin-bottom:.3rem;">Số tài khoản</div>
+                        <div style="font-weight:800;font-family:monospace;font-size:1rem;color:#fbbf24;letter-spacing:1px;">0968073500</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:.9rem 1.1rem;">
+                        <div style="color:rgba(255,255,255,.55);font-size:.72rem;margin-bottom:.3rem;">Chủ tài khoản</div>
+                        <div style="font-weight:800;">LU DANG HUNG</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:.9rem 1.1rem;">
+                        <div style="color:rgba(255,255,255,.55);font-size:.72rem;margin-bottom:.3rem;">MoMo</div>
+                        <div style="font-weight:800;font-family:monospace;font-size:1rem;color:#f472b6;">0968073500</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danh sách học viên + tiền -->
+            <div style="background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.06);overflow:hidden;">
+                <div style="padding:1.2rem 1.5rem;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;justify-content:space-between;">
+                    <h6 class="fw-bold mb-0"><i class="fas fa-list me-2 text-primary"></i>Chi tiết học phí từng học viên</h6>
+                    <span style="font-size:.78rem;color:#9ca3af;"><?php echo count($all_students); ?> học viên</span>
+                </div>
+                <?php if (empty($all_students)): ?>
+                <div style="text-align:center;padding:2rem;color:#9ca3af;">Chưa có học viên nào</div>
+                <?php else: ?>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+                        <thead>
+                            <tr style="background:#f9fafb;">
+                                <th style="padding:.75rem 1.2rem;text-align:left;font-weight:700;color:#6b7280;font-size:.78rem;">HỌC VIÊN</th>
+                                <th style="padding:.75rem 1rem;text-align:left;font-weight:700;color:#6b7280;font-size:.78rem;">KHÓA HỌC</th>
+                                <th style="padding:.75rem 1rem;text-align:left;font-weight:700;color:#6b7280;font-size:.78rem;">NGÀY ĐĂNG KÝ</th>
+                                <th style="padding:.75rem 1rem;text-align:right;font-weight:700;color:#6b7280;font-size:.78rem;">HỌC PHÍ</th>
+                                <th style="padding:.75rem 1.2rem;text-align:center;font-weight:700;color:#6b7280;font-size:.78rem;">TRẠNG THÁI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($all_students as $s):
+                            $price = $course_prices[$s['course']] ?? 0;
+                            $status = $s['status'] ?? 'pending_payment';
+                            $statusMap = [
+                                'active'          => ['Đã TT','#10b981','#f0fdf4','#bbf7d0'],
+                                'pending_payment' => ['Chờ TT','#f59e0b','#fffbeb','#fde68a'],
+                                'cancelled'       => ['Huỷ','#ef4444','#fef2f2','#fca5a5'],
+                            ];
+                            [$stLabel,$stColor,$stBg,$stBorder] = $statusMap[$status] ?? ['?','#9ca3af','#f9fafb','#e5e7eb'];
+                        ?>
+                        <tr style="border-bottom:1px solid #f9fafb;">
+                            <td style="padding:.85rem 1.2rem;">
+                                <div style="font-weight:700;"><?php echo escape($s['student_name']); ?></div>
+                                <div style="font-size:.75rem;color:#9ca3af;"><?php echo escape($s['phone']); ?></div>
+                                <div style="font-size:.72rem;font-family:monospace;color:#6366f1;"><?php echo escape($s['student_code']); ?></div>
+                            </td>
+                            <td style="padding:.85rem 1rem;">
+                                <span style="background:#eff6ff;color:#3b82f6;border-radius:8px;padding:3px 10px;font-size:.78rem;font-weight:700;">
+                                    <?php echo $course_labels[$s['course']] ?? $s['course']; ?>
+                                </span>
+                            </td>
+                            <td style="padding:.85rem 1rem;color:#6b7280;font-size:.82rem;">
+                                <?php echo $s['reg_date'] ?? date('d/m/Y', strtotime($s['created_at'])); ?>
+                            </td>
+                            <td style="padding:.85rem 1rem;text-align:right;">
+                                <div style="font-weight:800;font-size:.92rem;color:#111827;"><?php echo number_format($price); ?>đ</div>
+                            </td>
+                            <td style="padding:.85rem 1.2rem;text-align:center;">
+                                <span style="background:<?php echo $stBg; ?>;border:1px solid <?php echo $stBorder; ?>;color:<?php echo $stColor; ?>;border-radius:20px;padding:4px 12px;font-size:.75rem;font-weight:700;">
+                                    <?php echo $stLabel; ?>
+                                </span>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                        <tfoot>
+                            <tr style="background:#f9fafb;border-top:2px solid #e5e7eb;">
+                                <td colspan="3" style="padding:.9rem 1.2rem;font-weight:700;color:#374151;">Tổng cộng</td>
+                                <td style="padding:.9rem 1rem;text-align:right;font-weight:900;font-size:1rem;color:#10b981;"><?php echo number_format($total_revenue + $pending_revenue); ?>đ</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <!-- Tab: Quét QR -->
         <div id="tab-scan" style="display:none;">
             <div class="row justify-content-center">
@@ -539,6 +716,42 @@ require_once __DIR__ . '/../includes/header.php';
                         </div>
 
                         <div id="scanResult" style="display:none;margin-top:1rem;"></div>
+
+                        <?php
+// Load recent check-ins for this coach
+$recentLogs = [];
+try {
+    $logQ = $mysqli->prepare("
+        SELECT al.scanned_at, al.student_code,
+               tr.student_name, tr.course
+        FROM attendance_logs al
+        LEFT JOIN training_registrations tr ON tr.student_code = al.student_code
+        WHERE al.coach_id = ?
+        ORDER BY al.scanned_at DESC LIMIT 5
+    ");
+    $logQ->bind_param('i', $coach_id);
+    $logQ->execute();
+    $recentLogs = $logQ->get_result()->fetch_all(MYSQLI_ASSOC);
+    $logQ->close();
+} catch (Exception $e) {}
+?>
+<?php if (!empty($recentLogs)): ?>
+<div style="margin-top:1.5rem;text-align:left;">
+    <h6 class="fw-bold mb-3" style="color:#374151;"><i class="fas fa-history me-2 text-primary"></i>Điểm danh gần đây</h6>
+    <?php foreach ($recentLogs as $log): ?>
+    <div style="background:#f8fafc;border-radius:10px;padding:.65rem 1rem;margin-bottom:.5rem;display:flex;align-items:center;gap:.8rem;border-left:3px solid #6366f1;">
+        <div style="width:34px;height:34px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="fas fa-check" style="color:#fff;font-size:.8rem;"></i>
+        </div>
+        <div style="flex:1;">
+            <div style="font-weight:700;font-size:.85rem;"><?php echo escape($log['student_name'] ?? $log['student_code']); ?></div>
+            <div style="font-size:.72rem;color:#9ca3af;"><?php echo date('H:i d/m/Y', strtotime($log['scanned_at'])); ?></div>
+        </div>
+        <div style="font-family:monospace;font-size:.75rem;color:#6366f1;font-weight:700;"><?php echo escape($log['student_code']); ?></div>
+    </div>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
                     </div>
                 </div>
             </div>

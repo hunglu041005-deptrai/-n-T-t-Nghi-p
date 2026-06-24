@@ -168,7 +168,7 @@ require_once __DIR__ . '/includes/header.php';
                         
                         <?php foreach ($featuredCourts as $court): ?>
                             <div class="col-md-6 col-xl-4">
-                                <div class="card h-100 shadow-sm border-0 featured-court-card">
+                                <div class="card h-100 shadow-sm border-0 featured-court-card" data-court-id="<?php echo $court['id']; ?>">
                                     <div class="position-relative">
                                         <img src="<?php echo escape($court['cover_image']); ?>" class="card-img-top" alt="<?php echo escape($court['name']); ?>">
                                         
@@ -202,12 +202,14 @@ require_once __DIR__ . '/includes/header.php';
                                         
                                         <!-- Quick Actions -->
                                         <div class="position-absolute bottom-0 end-0 m-2">
-                                            <div class="btn-group-vertical">
-                                                <button class="btn btn-light btn-sm" title="Yêu thích">
+                                            <div class="d-flex flex-column gap-1">
+                                                <button class="card-action-btn wishlist-btn" title="Yêu thích"
+                                                        onclick="toggleWishlist(this, <?php echo $court['id']; ?>)">
                                                     <i class="fas fa-heart"></i>
                                                 </button>
-                                                <button class="btn btn-light btn-sm" title="Chia sẻ">
-                                                    <i class="fas fa-share"></i>
+                                                <button class="card-action-btn" title="Chia sẻ"
+                                                        onclick="openShareModal(<?php echo $court['id']; ?>, '<?php echo escape($court['name']); ?>', '<?php echo escape($court['location']); ?>', <?php echo $court['latitude'] ?? 21.0285; ?>, <?php echo $court['longitude'] ?? 105.8542; ?>)">
+                                                    <i class="fas fa-share-alt"></i>
                                                 </button>
                                             </div>
                                         </div>
@@ -423,50 +425,170 @@ require_once __DIR__ . '/includes/header.php';
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
 <!-- Featured page specific scripts -->
+<style>
+/* Card action buttons (tim + share) — dùng chung với index.php */
+.card-action-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(255,255,255,.92); border: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .85rem; cursor: pointer; transition: all .2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15); color: #374151;
+}
+.card-action-btn:hover { transform: scale(1.12); }
+.wishlist-btn { color: #9ca3af; }
+.wishlist-btn.active { color: #ef4444; background: #fff0f0; }
+.share-option {
+    display: flex; align-items: center; gap: .9rem;
+    padding: .85rem 1rem; border-radius: 14px; cursor: pointer;
+    transition: all .2s; text-decoration: none; color: #111827;
+    border: 1.5px solid #e5e7eb; margin-bottom: .6rem;
+}
+.share-option:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(0,0,0,.08); color: #111827; }
+.share-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; flex-shrink: 0;
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Load more functionality
+    // Load more
     const loadMoreBtn = document.getElementById('loadMoreBtn');
     if (loadMoreBtn) {
         loadMoreBtn.addEventListener('click', function() {
-            // Simulate loading more courts
             this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang tải...';
-            
             setTimeout(() => {
                 this.innerHTML = '<i class="fas fa-check me-2"></i>Đã tải tất cả';
                 this.disabled = true;
-                this.classList.remove('btn-outline-warning');
-                this.classList.add('btn-success');
+                this.classList.replace('btn-outline-warning', 'btn-success');
             }, 1500);
         });
     }
-    
-    // Heart button functionality
-    document.querySelectorAll('.fa-heart').forEach(heart => {
-        heart.parentElement.addEventListener('click', function(e) {
-            e.preventDefault();
-            heart.classList.toggle('text-danger');
-            if (heart.classList.contains('text-danger')) {
-                heart.classList.remove('far');
-                heart.classList.add('fas');
-            } else {
-                heart.classList.remove('fas');
-                heart.classList.add('far');
-            }
-        });
+
+    // Khôi phục wishlist từ localStorage
+    const list = JSON.parse(localStorage.getItem('wishlist') || '[]');
+    document.querySelectorAll('.wishlist-btn').forEach(btn => {
+        const card = btn.closest('[data-court-id]');
+        if (!card) return;
+        if (list.includes(parseInt(card.dataset.courtId))) {
+            btn.classList.add('active');
+        }
     });
 });
 
-// Hàm xác nhận gọi điện
+// Tim yêu thích
+function toggleWishlist(btn, courtId) {
+    btn.classList.toggle('active');
+    let list = JSON.parse(localStorage.getItem('wishlist') || '[]');
+    if (btn.classList.contains('active')) {
+        if (!list.includes(courtId)) list.push(courtId);
+    } else {
+        list = list.filter(id => id !== courtId);
+    }
+    localStorage.setItem('wishlist', JSON.stringify(list));
+}
+
+// Chia sẻ
+let _shareCourtData = {};
+
+function openShareModal(id, name, location, lat, lng) {
+    _shareCourtData = { id, name, location, lat, lng };
+
+    const pageUrl   = encodeURIComponent(window.location.origin + '/badminton_booking/booking-online.php?court_id=' + id);
+    const shareText = encodeURIComponent('🏸 ' + name + ' - ' + location + ' | Đặt sân cầu lông tại BadmintonPro!');
+    const gmapsUrl  = `https://www.google.com/maps/search/${encodeURIComponent(name + ' ' + location)}/@${lat},${lng},16z`;
+
+    document.getElementById('ftShareCourtName').textContent = name + ' · ' + location;
+    document.getElementById('ftShareGoogleMaps').href = gmapsUrl;
+    document.getElementById('ftShareFacebook').href     = `https://www.facebook.com/sharer/sharer.php?u=${pageUrl}&quote=${shareText}`;
+    document.getElementById('ftShareInstagram').href    = `https://www.instagram.com/?url=${pageUrl}`;
+    document.getElementById('ftCopyLinkText').textContent = 'Nhấn để sao chép';
+    document.getElementById('ftCopyLinkText').style.color = '';
+
+    new bootstrap.Modal(document.getElementById('featuredShareModal')).show();
+}
+
+function copyFtCourtLink() {
+    const url = window.location.origin + '/badminton_booking/booking-online.php?court_id=' + _shareCourtData.id;
+    navigator.clipboard.writeText(url).then(() => {
+        const el = document.getElementById('ftCopyLinkText');
+        el.textContent = '✅ Đã sao chép!';
+        el.style.color = '#10b981';
+        setTimeout(() => { el.textContent = 'Nhấn để sao chép'; el.style.color = ''; }, 2500);
+    }).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = url; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta);
+        document.getElementById('ftCopyLinkText').textContent = '✅ Đã sao chép!';
+    });
+}
+
+// Xác nhận gọi điện
 function confirmCall(courtName, phone, phoneDisplay) {
-    document.getElementById('callCourtName').textContent = courtName;
+    document.getElementById('callCourtName').textContent    = courtName;
     document.getElementById('callPhoneDisplay').textContent = phoneDisplay;
-    document.getElementById('callPhoneLink').href = 'tel:' + phone;
-    document.getElementById('callPhoneLink').setAttribute('data-phone', phone);
+    document.getElementById('callPhoneLink').href           = 'tel:' + phone;
     new bootstrap.Modal(document.getElementById('callModal')).show();
-    return false; // Ngăn href tel: chạy trước khi modal hiện
+    return false;
 }
 </script>
+
+<!-- ===== MODAL CHIA SẺ (featured) ===== -->
+<div class="modal fade" id="featuredShareModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:20px;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#667eea,#764ba2);padding:1.2rem 1.5rem;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <h5 style="color:#fff;font-weight:800;margin:0;font-size:1rem;">
+                        <i class="fas fa-share-alt me-2"></i>Chia sẻ sân cầu lông
+                    </h5>
+                    <div id="ftShareCourtName" style="color:rgba(255,255,255,.75);font-size:.8rem;margin-top:2px;"></div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div style="padding:1.3rem 1.2rem;">
+                <a id="ftShareGoogleMaps" href="#" target="_blank" class="share-option">
+                    <div class="share-icon" style="background:#fef2f2;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#ea4335"/><circle cx="12" cy="9" r="2.5" fill="#fff"/></svg>
+                    </div>
+                    <div><div style="font-weight:700;font-size:.9rem;">Xem trên Google Maps</div><div style="font-size:.75rem;color:#9ca3af;">Mở bản đồ và chỉ đường</div></div>
+                    <i class="fas fa-external-link-alt ms-auto" style="color:#9ca3af;font-size:.8rem;"></i>
+                </a>
+                <a id="ftShareFacebook" href="#" target="_blank" class="share-option">
+                    <div class="share-icon" style="background:#eff6ff;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="#1877f2"><path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 6.026 4.388 11.02 10.125 11.927v-8.437H7.078v-3.49h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.437C19.612 23.093 24 18.1 24 12.073z"/></svg>
+                    </div>
+                    <div><div style="font-weight:700;font-size:.9rem;">Chia sẻ Facebook</div><div style="font-size:.75rem;color:#9ca3af;">Đăng lên tường Facebook</div></div>
+                    <i class="fas fa-external-link-alt ms-auto" style="color:#9ca3af;font-size:.8rem;"></i>
+                </a>
+                <!-- Instagram -->
+                <a id="ftShareInstagram" href="#" target="_blank" class="share-option">
+                    <div class="share-icon" style="background:#fdf2f8;">
+                        <svg width="24" height="24" viewBox="0 0 24 24">
+                            <defs><linearGradient id="igGrad2" x1="0%" y1="100%" x2="100%" y2="0%">
+                                <stop offset="0%" style="stop-color:#f09433"/>
+                                <stop offset="50%" style="stop-color:#dc2743"/>
+                                <stop offset="100%" style="stop-color:#bc1888"/>
+                            </linearGradient></defs>
+                            <rect width="24" height="24" rx="6" fill="url(#igGrad2)"/>
+                            <circle cx="12" cy="12" r="4.5" stroke="#fff" stroke-width="1.8" fill="none"/>
+                            <circle cx="17.5" cy="6.5" r="1.2" fill="#fff"/>
+                        </svg>
+                    </div>
+                    <div><div style="font-weight:700;font-size:.9rem;">Chia sẻ Instagram</div><div style="font-size:.75rem;color:#9ca3af;">Đăng story hoặc tin nhắn</div></div>
+                    <i class="fas fa-external-link-alt ms-auto" style="color:#9ca3af;font-size:.8rem;"></i>
+                </a>
+                <div class="share-option" onclick="copyFtCourtLink()">
+                    <div class="share-icon" style="background:#f3f4f6;"><i class="fas fa-link" style="color:#6b7280;"></i></div>
+                    <div style="flex:1;"><div style="font-weight:700;font-size:.9rem;">Sao chép liên kết</div><div id="ftCopyLinkText" style="font-size:.75rem;color:#9ca3af;">Nhấn để sao chép</div></div>
+                    <i class="fas fa-copy" style="color:#9ca3af;font-size:.8rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Modal xác nhận gọi điện -->
 <div class="modal fade" id="callModal" tabindex="-1">

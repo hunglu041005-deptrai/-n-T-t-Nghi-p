@@ -239,84 +239,124 @@ require_once __DIR__ . '/includes/header.php';
                             <i class="fas fa-credit-card text-primary me-2"></i>
                             Phương thức thanh toán
                         </h6>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="payment-option" data-method="momo">
-                                    <div class="payment-card p-4 border rounded-3">
-                                        <div class="d-flex align-items-center">
-                                            <input type="radio" name="paymentMethod" value="momo" class="form-check-input me-3">
-                                            <div class="payment-icon me-3">
-                                                <div class="bg-danger bg-opacity-10 rounded-circle p-2 d-inline-flex">
-                                                    <i class="fab fa-cc-mastercard text-danger fa-lg"></i>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div class="fw-bold">Ví MoMo</div>
-                                                <small class="text-muted">Thanh toán qua ví điện tử</small>
-                                            </div>
-                                        </div>
+
+                        <!-- MoMo -->
+                        <div class="payment-option pay-opt" data-method="momo" onclick="selectBookingPM('momo',this)">
+                            <div class="payment-card border rounded-3 p-3" style="cursor:pointer;transition:all .2s;">
+                                <div class="d-flex align-items-center">
+                                    <input type="radio" name="paymentMethod" value="momo" class="form-check-input me-3" style="accent-color:#db2777;transform:scale(1.2);">
+                                    <div class="me-3" style="width:44px;height:44px;background:#fce7f3;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="3" fill="#db2777" opacity=".12"/><rect x="3" y="5" width="18" height="14" rx="3" stroke="#db2777" stroke-width="1.8"/><circle cx="8" cy="11" r="2" fill="#db2777"/><circle cx="12" cy="11" r="2" fill="#db2777"/><circle cx="16" cy="11" r="2" fill="#db2777"/></svg>
                                     </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="payment-option" data-method="vnpay">
-                                    <div class="payment-card p-4 border rounded-3">
-                                        <div class="d-flex align-items-center">
-                                            <input type="radio" name="paymentMethod" value="vnpay" class="form-check-input me-3">
-                                            <div class="payment-icon me-3">
-                                                <div class="bg-primary bg-opacity-10 rounded-circle p-2 d-inline-flex">
-                                                    <i class="fas fa-university text-primary fa-lg"></i>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div class="fw-bold">VNPay</div>
-                                                <small class="text-muted">Thanh toán qua ngân hàng</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-12">
-                                <div class="payment-option" data-method="cash">
-                                    <div class="payment-card p-4 border rounded-3">
-                                        <div class="d-flex align-items-center">
-                                            <input type="radio" name="paymentMethod" value="cash" class="form-check-input me-3" checked>
-                                            <div class="payment-icon me-3">
-                                                <div class="bg-success bg-opacity-10 rounded-circle p-2 d-inline-flex">
-                                                    <i class="fas fa-money-bill-wave text-success fa-lg"></i>
-                                                </div>
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <div class="fw-bold">Tiền mặt</div>
-                                                <small class="text-muted">Thanh toán tại sân khi đến chơi</small>
-                                            </div>
-                                            <div class="text-end">
-                                                <span class="badge bg-success bg-opacity-20 text-success">
-                                                    <i class="fas fa-star me-1"></i>Phổ biến
-                                                </span>
-                                            </div>
-                                        </div>
+                                    <div>
+                                        <div class="fw-bold">Ví MoMo</div>
+                                        <small class="text-muted">Chuyển tiền qua số điện thoại MoMo</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Payment Info -->
-                        <div class="payment-info mt-3 p-3 bg-light rounded-3">
-                            <div class="row align-items-center">
-                                <div class="col-md-8">
-                                    <small class="text-muted">
-                                        <i class="fas fa-shield-alt text-success me-1"></i>
-                                        <strong>Bảo mật:</strong> Tất cả giao dịch được mã hóa và bảo mật
-                                    </small>
-                                </div>
-                                <div class="col-md-4 text-md-end">
-                                    <small class="text-muted">
-                                        <i class="fas fa-clock me-1"></i>
-                                        Xử lý tức thì
-                                    </small>
+
+                        <!-- MoMo info panel -->
+                        <div id="bookingMomoPanel" style="display:none;background:#fdf2f8;border:1px solid #f9a8d4;border-radius:14px;padding:1.2rem;margin-bottom:.8rem;animation:bkFadeIn .25s ease;">
+                            <div style="font-weight:700;font-size:.82rem;color:#be185d;margin-bottom:.8rem;">
+                                <i class="fas fa-mobile-alt me-1"></i> Thông tin thanh toán MoMo
+                            </div>
+                            <div class="d-flex gap-3 align-items-start">
+                                <img id="bookingMomoQr"
+                                     src="https://img.vietqr.io/image/MOMO-0968073500-qr_only.png?amount=0&addInfo=DATSAN&accountName=LU+DANG+HUNG"
+                                     alt="QR MoMo"
+                                     style="width:120px;height:120px;border-radius:10px;border:2px solid #f9a8d4;padding:3px;background:#fff;flex-shrink:0;">
+                                <div style="display:grid;gap:.4rem;font-size:.85rem;">
+                                    <div><span style="color:#78716c;min-width:110px;display:inline-block;">Số điện thoại</span> <strong style="font-family:monospace;color:#db2777;">0968073500</strong></div>
+                                    <div><span style="color:#78716c;min-width:110px;display:inline-block;">Tên tài khoản</span> <strong>LU DANG HUNG</strong></div>
+                                    <div><span style="color:#78716c;min-width:110px;display:inline-block;">Số tiền</span> <strong id="bookingMomoAmount" style="color:#db2777;">—</strong></div>
+                                    <div><span style="color:#78716c;min-width:110px;display:inline-block;">Nội dung CK</span> <strong id="bookingMomoRef" style="font-family:monospace;color:#db2777;">DATSAN</strong></div>
                                 </div>
                             </div>
+                            <div style="margin-top:.7rem;background:#fce7f3;border-radius:8px;padding:.5rem .8rem;font-size:.78rem;color:#9d174d;">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Mở app MoMo → Quét QR hoặc Chuyển tiền → Nhập SĐT → Điền đúng nội dung
+                            </div>
+                            <div style="margin-top:.85rem;padding:.75rem 1rem;background:#fff;border:1.5px solid #f9a8d4;border-radius:10px;display:flex;align-items:center;gap:.7rem;">
+                                <input type="checkbox" id="bookingMomoConfirm" onchange="updateBookingConfirmBtn()"
+                                       style="width:18px;height:18px;accent-color:#db2777;cursor:pointer;flex-shrink:0;">
+                                <label for="bookingMomoConfirm" style="font-size:.84rem;font-weight:600;color:#374151;cursor:pointer;margin:0;">
+                                    Tôi đã chuyển khoản thành công qua MoMo
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- VNPay -->
+                        <div class="payment-option pay-opt" data-method="vnpay" onclick="selectBookingPM('vnpay',this)">
+                            <div class="payment-card border rounded-3 p-3" style="cursor:pointer;transition:all .2s;">
+                                <div class="d-flex align-items-center">
+                                    <input type="radio" name="paymentMethod" value="vnpay" class="form-check-input me-3" style="accent-color:#2563eb;transform:scale(1.2);">
+                                    <div class="me-3" style="width:44px;height:44px;background:#dbeafe;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V10M19 21V10" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round"/><path d="M2 10l10-7 10 7" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="9" y="14" width="6" height="7" rx="1" fill="#2563eb" opacity=".15" stroke="#2563eb" stroke-width="1.5"/></svg>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">VNPay / MB Bank</div>
+                                        <small class="text-muted">Chuyển khoản ngân hàng MB Bank</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- VNPay info panel -->
+                        <div id="bookingBankPanel" style="display:none;background:#fffdf0;border:1px solid #fde68a;border-radius:14px;padding:1.2rem;margin-bottom:.8rem;animation:bkFadeIn .25s ease;">
+                            <div style="font-weight:700;font-size:.82rem;color:#92400e;margin-bottom:.8rem;">
+                                <i class="fas fa-university me-1"></i> Thông tin chuyển khoản ngân hàng
+                            </div>
+                            <div class="d-flex gap-3 align-items-start">
+                                <img id="bookingBankQr"
+                                     src="https://img.vietqr.io/image/MB-0968073500-qr_only.png?amount=0&addInfo=DATSAN&accountName=LU+DANG+HUNG"
+                                     alt="QR MB Bank"
+                                     style="width:120px;height:120px;border-radius:10px;border:2px solid #fde68a;padding:3px;background:#fff;flex-shrink:0;">
+                                <div style="display:grid;gap:.4rem;font-size:.85rem;">
+                                    <div><span style="color:#78716c;min-width:110px;display:inline-block;">Ngân hàng</span> <strong>MB Bank</strong></div>
+                                    <div><span style="color:#78716c;min-width:110px;display:inline-block;">Số tài khoản</span> <strong style="font-family:monospace;color:#6366f1;">0968073500</strong></div>
+                                    <div><span style="color:#78716c;min-width:110px;display:inline-block;">Chủ tài khoản</span> <strong>LU DANG HUNG</strong></div>
+                                    <div><span style="color:#78716c;min-width:110px;display:inline-block;">Số tiền</span> <strong id="bookingBankAmount" style="color:#6366f1;">—</strong></div>
+                                    <div><span style="color:#78716c;min-width:110px;display:inline-block;">Nội dung CK</span> <strong id="bookingBankRef" style="font-family:monospace;color:#6366f1;">DATSAN</strong></div>
+                                </div>
+                            </div>
+                            <div style="margin-top:.7rem;background:#fef9c3;border-radius:8px;padding:.5rem .8rem;font-size:.78rem;color:#854d0e;">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Ghi đúng nội dung chuyển khoản để được xác nhận tự động
+                            </div>
+                            <div style="margin-top:.85rem;padding:.75rem 1rem;background:#fff;border:1.5px solid #fde68a;border-radius:10px;display:flex;align-items:center;gap:.7rem;">
+                                <input type="checkbox" id="bookingBankConfirm" onchange="updateBookingConfirmBtn()"
+                                       style="width:18px;height:18px;accent-color:#d97706;cursor:pointer;flex-shrink:0;">
+                                <label for="bookingBankConfirm" style="font-size:.84rem;font-weight:600;color:#374151;cursor:pointer;margin:0;">
+                                    Tôi đã chuyển khoản thành công
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Tiền mặt -->
+                        <div class="payment-option pay-opt" data-method="cash" onclick="selectBookingPM('cash',this)">
+                            <div class="payment-card border rounded-3 p-3" style="cursor:pointer;transition:all .2s;border-color:#16a34a!important;background:#f0fdf4;">
+                                <div class="d-flex align-items-center">
+                                    <input type="radio" name="paymentMethod" value="cash" class="form-check-input me-3" checked style="accent-color:#16a34a;transform:scale(1.2);">
+                                    <div class="me-3" style="width:44px;height:44px;background:#dcfce7;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="2" y="6" width="20" height="13" rx="3" fill="#16a34a" opacity=".15"/><rect x="2" y="6" width="20" height="13" rx="3" stroke="#16a34a" stroke-width="1.8"/><path d="M6 13h4M6 16h3" stroke="#16a34a" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="13" r="2.5" fill="#16a34a"/></svg>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold">Tiền mặt tại sân</div>
+                                        <small class="text-muted">Thanh toán tại sân khi đến chơi</small>
+                                    </div>
+                                    <span class="badge bg-success bg-opacity-20 text-success ms-2">
+                                        <i class="fas fa-star me-1"></i>Phổ biến
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SSL badge -->
+                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:.65rem 1rem;margin-top:.5rem;font-size:.78rem;color:#166534;display:flex;align-items:center;gap:.5rem;">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.5L2 4v4c0 3.3 2.7 5.5 6 6 3.3-.5 6-2.7 6-6V4L8 1.5z" fill="#16a34a" opacity=".15" stroke="#16a34a" stroke-width="1.3" stroke-linejoin="round"/><path d="M5 8l2 2 4-4" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            Giao dịch được bảo mật SSL 256-bit &nbsp;·&nbsp;
+                            <i class="fas fa-clock me-1"></i> Xử lý tức thì
                         </div>
                     </div>
                     
@@ -447,6 +487,32 @@ require_once __DIR__ . '/includes/header.php';
 
 <!-- Success Modal -->
 <div class="modal fade" id="bookingSuccessModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:20px;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#10b981,#059669);padding:1.5rem 2rem;text-align:center;color:#fff;">
+                <i class="fas fa-check-circle fa-3x mb-2 d-block"></i>
+                <h4 class="fw-bold mb-1">Đặt sân thành công!</h4>
+                <small style="opacity:.8;">Booking của bạn đã được xác nhận</small>
+            </div>
+            <div class="modal-body text-center p-4">
+                <div class="booking-details bg-light p-3 rounded mb-4 text-start">
+                    <p class="mb-1"><strong>Mã booking:</strong> <span id="bookingCode" class="text-primary fw-bold">-</span></p>
+                    <p class="mb-1"><strong>Sân:</strong> <span id="finalCourtName">-</span></p>
+                    <p class="mb-1"><strong>Thời gian:</strong> <span id="finalDateTime">-</span></p>
+                    <p class="mb-0"><strong>Tổng tiền:</strong> <span id="finalTotal" class="text-success fw-bold">-</span></p>
+                </div>
+                <div class="d-grid gap-2">
+                    <a href="booking-history.php" class="btn btn-success fw-bold" style="border-radius:12px;">
+                        <i class="fas fa-list me-2"></i>Xem lịch sử đặt sân
+                    </a>
+                    <button class="btn btn-outline-secondary" style="border-radius:12px;" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Đóng
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Payment Confirmation Modal (MoMo / Bank Transfer) -->
 <div class="modal fade" id="paymentConfirmModal" tabindex="-1" aria-labelledby="paymentConfirmModalLabel" aria-hidden="true">
@@ -567,32 +633,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 </div>
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-body text-center p-4">
-                <div class="success-icon mb-3">
-                    <i class="fas fa-check-circle fa-4x text-success"></i>
-                </div>
-                <h4 class="fw-bold text-success mb-3">Đặt sân thành công!</h4>
-                <p class="text-muted mb-4">Booking của bạn đã được xác nhận. Chúng tôi sẽ gửi thông tin chi tiết qua email.</p>
-                <div class="booking-details bg-light p-3 rounded mb-4">
-                    <p class="mb-1"><strong>Mã booking:</strong> <span id="bookingCode">-</span></p>
-                    <p class="mb-1"><strong>Sân:</strong> <span id="finalCourtName">-</span></p>
-                    <p class="mb-1"><strong>Thời gian:</strong> <span id="finalDateTime">-</span></p>
-                    <p class="mb-0"><strong>Tổng tiền:</strong> <span id="finalTotal" class="text-success">-</span></p>
-                </div>
-                <div class="d-grid gap-2">
-                    <a href="booking-history.php" class="btn btn-primary">
-                        <i class="fas fa-list me-2"></i>Xem lịch sử đặt sân
-                    </a>
-                    <button class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-2"></i>Đóng
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
@@ -616,6 +657,79 @@ document.addEventListener('change', function(e) {
 </script>
 
 <script>
+// ── Chọn phương thức thanh toán (booking) ──
+function selectBookingPM(method, el) {
+    // Highlight card
+    document.querySelectorAll('.pay-opt .payment-card').forEach(c => {
+        c.style.borderColor = '';
+        c.style.background  = '';
+    });
+    if (el) {
+        const card = el.querySelector('.payment-card');
+        if (card) {
+            const colors = {momo:'#f9a8d4', vnpay:'#fde68a', cash:'#16a34a'};
+            card.style.borderColor = colors[method] || '#6366f1';
+            card.style.background  = method === 'cash' ? '#f0fdf4' : '#fff';
+        }
+        const radio = el.querySelector('input[type=radio]');
+        if (radio) radio.checked = true;
+    }
+
+    // Hiện/ẩn panels
+    document.getElementById('bookingMomoPanel').style.display = method === 'momo'   ? 'block' : 'none';
+    document.getElementById('bookingBankPanel').style.display = method === 'vnpay'  ? 'block' : 'none';
+
+    // Reset checkboxes khi đổi phương thức
+    document.getElementById('bookingMomoConfirm').checked = false;
+    document.getElementById('bookingBankConfirm').checked = false;
+
+    // Update QR với tổng tiền hiện tại
+    updatePaymentQR(method);
+    updateBookingConfirmBtn();
+}
+
+function updatePaymentQR(method) {
+    const totalEl  = document.getElementById('summaryTotal');
+    const amount   = totalEl ? totalEl.textContent.replace(/[^\d]/g, '') : '0';
+    const ref      = 'DATSAN-' + Date.now().toString(36).toUpperCase().slice(-5);
+
+    if (method === 'momo') {
+        const qr = document.getElementById('bookingMomoQr');
+        if (qr) qr.src = `https://img.vietqr.io/image/MOMO-0968073500-qr_only.png?amount=${amount}&addInfo=${encodeURIComponent(ref)}&accountName=LU+DANG+HUNG`;
+        const amtEl = document.getElementById('bookingMomoAmount');
+        const refEl = document.getElementById('bookingMomoRef');
+        if (amtEl) amtEl.textContent = parseInt(amount).toLocaleString('vi-VN') + 'đ';
+        if (refEl) refEl.textContent = ref;
+    } else if (method === 'vnpay') {
+        const qr = document.getElementById('bookingBankQr');
+        if (qr) qr.src = `https://img.vietqr.io/image/MB-0968073500-qr_only.png?amount=${amount}&addInfo=${encodeURIComponent(ref)}&accountName=LU+DANG+HUNG`;
+        const amtEl = document.getElementById('bookingBankAmount');
+        const refEl = document.getElementById('bookingBankRef');
+        if (amtEl) amtEl.textContent = parseInt(amount).toLocaleString('vi-VN') + 'đ';
+        if (refEl) refEl.textContent = ref;
+    }
+}
+
+function updateBookingConfirmBtn() {
+    const method   = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'cash';
+    const btn      = document.getElementById('confirmBooking');
+    if (!btn) return;
+
+    if (method === 'cash') {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        return;
+    }
+    const momoOk = method === 'momo'  && document.getElementById('bookingMomoConfirm')?.checked;
+    const bankOk = method === 'vnpay' && document.getElementById('bookingBankConfirm')?.checked;
+    btn.disabled      = !(momoOk || bankOk);
+    btn.style.opacity = (momoOk || bankOk) ? '1' : '0.5';
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', function() {
+    updateBookingConfirmBtn();
+});
 // ── Chat widget cho booking-online ──
 function openBookingChat() {
     const existing = document.getElementById('bookingChatWidget');
@@ -697,6 +811,10 @@ function sendBookingChat() {
     }, 900);
 }
 </script>
+
+<style>
+@keyframes bkFadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+</style>
 
 <script src="assets/js/booking-online.js"></script>
 <?php if ($preselected_court): ?>
