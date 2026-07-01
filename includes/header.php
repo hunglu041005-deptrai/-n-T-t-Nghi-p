@@ -19,7 +19,7 @@ if (!$isAdminPage && isAdmin()) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Nền tảng đặt sân cầu lông trực tuyến hàng đầu Hà Nội. Đặt sân nhanh, giá rẻ, thanh toán linh hoạt.">
-    <title><?php echo $isAdminPage ? 'Admin - Badminton Booking Pro' : 'Badminton Booking - Đặt Sân Cầu Lông'; ?></title>
+    <title><?php echo $isAdminPage ? 'Admin - Hưng Dũng Booking' : 'Hưng Dũng Booking - Đặt Sân Cầu Lông'; ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/style.css">
@@ -32,7 +32,7 @@ if (!$isAdminPage && isAdmin()) {
     <div class="container-lg">
         <a class="navbar-brand fw-bold d-flex align-items-center" href="<?php echo $isAdminPage ? 'dashboard.php' : '../index.php'; ?>">
             <i class="fas fa-badminton me-2" style="font-size: 1.5rem; color: #ff6b35;"></i>
-            <span>Badminton<span style="color: #ff6b35;">Pro</span></span>
+            <span>Hưng Dũng<span style="color: #ff6b35;">Booking</span></span>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-label="Toggle menu">
             <span class="navbar-toggler-icon"></span>

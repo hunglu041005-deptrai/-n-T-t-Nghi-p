@@ -155,11 +155,31 @@ function isSlotAvailable($court_id, $date, $start, $end) {
 
 function getUserBookings($user_id) {
     global $mysqli;
-    $stmt = $mysqli->prepare('SELECT b.*, c.name AS court_name, c.location FROM bookings b JOIN courts c ON b.court_id = c.id WHERE b.user_id = ? ORDER BY b.booking_date DESC, b.start_time DESC');
+
+    // Đảm bảo cột discount_amount và promo_applied tồn tại
+    $mysqli->query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS discount_amount INT NOT NULL DEFAULT 0");
+    $mysqli->query("ALTER TABLE bookings ADD COLUMN IF NOT EXISTS promo_applied VARCHAR(150) DEFAULT NULL");
+    // courts.phone
+    $chkP = $mysqli->query("SHOW COLUMNS FROM courts LIKE 'phone'");
+    if ($chkP && $chkP->num_rows === 0) {
+        $mysqli->query("ALTER TABLE courts ADD COLUMN phone VARCHAR(20) DEFAULT NULL");
+    }
+
+    $stmt = $mysqli->prepare(
+        'SELECT b.*,
+                c.name AS court_name,
+                c.location,
+                COALESCE(c.phone, \'0968073500\') AS court_phone,
+                COALESCE(b.discount_amount, 0)   AS discount_amount,
+                COALESCE(b.promo_applied, \'\')   AS promo_applied
+         FROM bookings b
+         JOIN courts c ON b.court_id = c.id
+         WHERE b.user_id = ?
+         ORDER BY b.booking_date DESC, b.start_time DESC'
+    );
     $stmt->bind_param('i', $user_id);
     $stmt->execute();
-    $result = $stmt->get_result();
-    $bookings = $result->fetch_all(MYSQLI_ASSOC);
+    $bookings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
     return $bookings;
 }

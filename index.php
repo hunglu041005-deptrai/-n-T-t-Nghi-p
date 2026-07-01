@@ -385,6 +385,21 @@ require_once __DIR__ . '/includes/header.php';
                         <i class="fas fa-map"></i> Xem bản đồ
                     </a>
                 </div>
+
+                <!-- Banner shop nhỏ -->
+                <a href="equipment.php" style="display:inline-flex;align-items:center;gap:.7rem;margin-top:1.2rem;
+                    background:linear-gradient(135deg,rgba(251,191,36,.15),rgba(245,158,11,.1));
+                    border:1px solid rgba(251,191,36,.35);border-radius:12px;
+                    padding:.6rem 1rem;text-decoration:none;transition:all .2s;max-width:340px;">
+                    <div style="width:36px;height:36px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="fas fa-shopping-bag" style="color:#fff;font-size:.9rem;"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:.82rem;color:#fbbf24;line-height:1.2;">🛒 Shop vợt & phụ kiện</div>
+                        <div style="font-size:.72rem;color:rgba(255,255,255,.55);">Yonex, Victor, Lining — giao hàng toàn quốc</div>
+                    </div>
+                    <i class="fas fa-chevron-right" style="color:rgba(251,191,36,.6);font-size:.75rem;margin-left:auto;"></i>
+                </a>
             </div>
             <div class="col-lg-6 d-none d-lg-block text-center">
                 <!-- Floating court preview -->
@@ -401,6 +416,24 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                             <?php endforeach; ?>
                         </div>
+
+                        <!-- Banner shop nhỏ -->
+                        <a href="equipment.php" style="display:flex;align-items:center;gap:.65rem;margin-bottom:.75rem;
+                            background:linear-gradient(135deg,rgba(251,191,36,.18),rgba(245,158,11,.12));
+                            border:1px solid rgba(251,191,36,.4);border-radius:12px;
+                            padding:.55rem .9rem;text-decoration:none;transition:all .2s;"
+                            onmouseover="this.style.background='linear-gradient(135deg,rgba(251,191,36,.28),rgba(245,158,11,.2))'"
+                            onmouseout="this.style.background='linear-gradient(135deg,rgba(251,191,36,.18),rgba(245,158,11,.12))'">
+                            <div style="width:30px;height:30px;background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i class="fas fa-shopping-bag" style="color:#fff;font-size:.78rem;"></i>
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-weight:700;font-size:.75rem;color:#fbbf24;white-space:nowrap;">🛒 Shop vợt & phụ kiện</div>
+                                <div style="font-size:.65rem;color:rgba(255,255,255,.5);">Yonex · Victor · Lining</div>
+                            </div>
+                            <i class="fas fa-chevron-right" style="color:rgba(251,191,36,.7);font-size:.68rem;flex-shrink:0;"></i>
+                        </a>
+
                         <div style="background:rgba(102,126,234,.3);border-radius:12px;padding:.8rem;text-align:center;color:#fff;font-size:.85rem;font-weight:700;">
                             <i class="fas fa-calendar-check me-2 text-success"></i>
                             <?php echo count($courts); ?> sân đang trống hôm nay

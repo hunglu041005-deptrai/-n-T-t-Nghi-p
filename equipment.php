@@ -174,9 +174,55 @@ require_once __DIR__ . '/includes/header.php';
                                                         </small>
                                                     <?php endif; ?>
                                                 </div>
-                                                <button class="btn btn-danger w-100 add-to-cart" data-product-id="<?php echo $product['id']; ?>">
-                                                    <i class="fas fa-shopping-cart me-2"></i>Thêm vào giỏ
-                                                </button>
+
+                                                <?php
+                                                // Danh mục cần chọn size
+                                                $needSize   = in_array($product['category_slug'] ?? '', ['giay-the-thao','quan-ao','phu-kien']);
+                                                $sizeOptions = [];
+                                                if (in_array($product['category_slug'] ?? '', ['giay-the-thao'])) {
+                                                    $sizeOptions = ['38','39','40','41','42','43','44'];
+                                                } elseif (in_array($product['category_slug'] ?? '', ['quan-ao'])) {
+                                                    $sizeOptions = ['S','M','L','XL','XXL'];
+                                                } elseif (in_array($product['category_slug'] ?? '', ['phu-kien'])) {
+                                                    $sizeOptions = ['S/M','M/L','L/XL','One Size'];
+                                                }
+                                                ?>
+
+                                                <?php if ($needSize && !empty($sizeOptions)): ?>
+                                                <div class="size-selector mb-2" id="size-wrap-<?php echo $product['id']; ?>">
+                                                    <div style="font-size:.75rem;font-weight:700;color:#374151;margin-bottom:.35rem;">
+                                                        <i class="fas fa-ruler-horizontal me-1 text-muted"></i>Chọn size:
+                                                    </div>
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                        <?php foreach ($sizeOptions as $s): ?>
+                                                        <button type="button" class="size-chip"
+                                                                data-product-id="<?php echo $product['id']; ?>"
+                                                                data-size="<?php echo $s; ?>"
+                                                                onclick="selectSize(this)">
+                                                            <?php echo $s; ?>
+                                                        </button>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                    <input type="hidden" id="selected-size-<?php echo $product['id']; ?>" value="">
+                                                </div>
+                                                <?php endif; ?>
+
+                                                <!-- Hai nút hành động -->
+                                                <div class="d-flex gap-2 mt-2">
+                                                    <button class="btn btn-danger flex-grow-1 add-to-cart"
+                                                            data-product-id="<?php echo $product['id']; ?>"
+                                                            <?php if ($needSize): ?>data-needs-size="1"<?php endif; ?>>
+                                                        <i class="fas fa-shopping-cart me-1"></i>Giỏ hàng
+                                                    </button>
+                                                    <button class="btn btn-warning flex-grow-1 fw-bold buy-now-btn"
+                                                            data-product-id="<?php echo $product['id']; ?>"
+                                                            data-product-name="<?php echo htmlspecialchars($product['name']); ?>"
+                                                            data-product-price="<?php echo $product['sale_price'] ?: $product['price']; ?>"
+                                                            data-product-image="<?php echo htmlspecialchars($product['image'] ?? ''); ?>"
+                                                            <?php if ($needSize): ?>data-needs-size="1"<?php endif; ?>>
+                                                        <i class="fas fa-bolt me-1"></i>Đặt ngay
+                                                    </button>
+                                                </div>
                                             <?php else: ?>
                                                 <div class="stock-info mb-2">
                                                     <small class="text-danger">
@@ -241,5 +287,96 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
+
+<style>
+/* Size chips */
+.size-chip {
+    background: #f3f4f6; border: 1.5px solid #e5e7eb;
+    border-radius: 8px; padding: 3px 10px;
+    font-size: .75rem; font-weight: 700; color: #374151;
+    cursor: pointer; transition: all .15s;
+}
+.size-chip:hover   { border-color: #ef4444; color: #ef4444; background: #fff0f0; }
+.size-chip.active  { background: #ef4444; border-color: #ef4444; color: #fff; }
+.size-chip.sold-out{ opacity:.45; cursor:not-allowed; text-decoration:line-through; }
+</style>
+
+<script>
+// Chọn size
+function selectSize(btn) {
+    const pid  = btn.dataset.productId;
+    document.querySelectorAll(`.size-chip[data-product-id="${pid}"]`).forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('selected-size-' + pid).value = btn.dataset.size;
+}
+
+// Đặt ngay — thêm vào giỏ rồi redirect checkout
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.buy-now-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const pid       = parseInt(this.dataset.productId);
+            const name      = this.dataset.productName;
+            const price     = parseInt(this.dataset.productPrice);
+            const image     = this.dataset.productImage;
+            const needsSize = this.dataset.needsSize === '1';
+
+            if (needsSize) {
+                const sizeVal = document.getElementById('selected-size-' + pid)?.value;
+                if (!sizeVal) {
+                    // Highlight size selector
+                    const wrap = document.getElementById('size-wrap-' + pid);
+                    if (wrap) {
+                        wrap.style.animation = 'none';
+                        wrap.style.border = '1.5px solid #ef4444';
+                        wrap.style.borderRadius = '8px';
+                        wrap.style.padding = '4px';
+                        setTimeout(() => { wrap.style.border = ''; wrap.style.padding = ''; }, 1800);
+                    }
+                    alert('Vui lòng chọn size trước khi đặt hàng!');
+                    return;
+                }
+                // Thêm size vào tên
+                const cartItem = { id: pid, name: name + ' (Size ' + sizeVal + ')', price: price, quantity: 1, image: image };
+                addToCartAndCheckout(cartItem);
+            } else {
+                const cartItem = { id: pid, name: name, price: price, quantity: 1, image: image };
+                addToCartAndCheckout(cartItem);
+            }
+        });
+    });
+
+    // Override add-to-cart để kiểm tra size
+    document.querySelectorAll('.add-to-cart[data-needs-size="1"]').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            const pid    = parseInt(this.dataset.productId);
+            const sizeVal = document.getElementById('selected-size-' + pid)?.value;
+            if (!sizeVal) {
+                e.stopImmediatePropagation();
+                const wrap = document.getElementById('size-wrap-' + pid);
+                if (wrap) {
+                    wrap.style.border = '1.5px solid #ef4444';
+                    wrap.style.borderRadius = '8px';
+                    wrap.style.padding = '4px';
+                    setTimeout(() => { wrap.style.border = ''; wrap.style.padding = ''; }, 1800);
+                }
+                alert('Vui lòng chọn size trước!');
+            }
+        }, true); // capture phase — runs before equipment.js handler
+    });
+});
+
+function addToCartAndCheckout(item) {
+    // Lấy cart hiện tại
+    let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const existing = cart.find(c => c.id === item.id && c.name === item.name);
+    if (existing) {
+        existing.quantity += 1;
+    } else {
+        cart.push(item);
+    }
+    localStorage.setItem('cart', JSON.stringify(cart));
+    window.location.href = 'checkout.php';
+}
+</script>
 
 <script src="assets/js/equipment.js"></script>
