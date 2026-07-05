@@ -71,18 +71,18 @@ require_once __DIR__ . '/../includes/header.php';
                             </a>
                         </div>
                         <div class="col-md-2">
-                            <a href="../test-shop-sync.php" target="_blank" class="btn btn-info w-100">
-                                <i class="fas fa-sync me-2"></i>Test Sync
+                            <a href="shop-orders.php" class="btn btn-info w-100">
+                                <i class="fas fa-shopping-bag me-2"></i>Đơn hàng
                             </a>
                         </div>
                         <div class="col-md-2">
-                            <a href="../add-sample-products.php" class="btn btn-warning w-100">
-                                <i class="fas fa-plus me-2"></i>Thêm mẫu
+                            <a href="#" class="btn btn-warning w-100" onclick="exportReport(); return false;">
+                                <i class="fas fa-file-export me-2"></i>Biểu mẫu
                             </a>
                         </div>
                         <div class="col-md-2">
-                            <a href="setup-shop.php" class="btn btn-secondary w-100">
-                                <i class="fas fa-database me-2"></i>Setup DB
+                            <a href="coaches.php" class="btn btn-secondary w-100">
+                                <i class="fas fa-chalkboard-teacher me-2"></i>HLV
                             </a>
                         </div>
                         <div class="col-md-2">
@@ -388,3 +388,107 @@ require_once __DIR__ . '/../includes/header.php';
 </style>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
+
+<!-- ===== MODAL BIỂU MẪU BÁO CÁO ===== -->
+<div class="modal fade" id="reportModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg" style="border-radius:20px;overflow:hidden;">
+            <div style="background:linear-gradient(135deg,#f59e0b,#d97706);padding:1.3rem 1.5rem;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <h5 style="color:#fff;font-weight:800;margin:0;font-size:1rem;">
+                        <i class="fas fa-file-export me-2"></i>Xuất biểu mẫu báo cáo
+                    </h5>
+                    <div style="color:rgba(255,255,255,.8);font-size:.78rem;margin-top:2px;">Chọn loại báo cáo muốn xuất</div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div style="padding:1.5rem;">
+                <div class="row g-3">
+
+                    <!-- Báo cáo doanh thu shop -->
+                    <div class="col-md-6">
+                        <div class="report-card border rounded-3 p-3 h-100"
+                             style="cursor:pointer;transition:all .2s;border-color:#e5e7eb!important;"
+                             onmouseover="this.style.borderColor='#f59e0b';this.style.background='#fffbeb'"
+                             onmouseout="this.style.borderColor='#e5e7eb';this.style.background=''"
+                             onclick="exportCSV('shop_orders')">
+                            <div style="width:44px;height:44px;background:#fef3c7;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:.8rem;">
+                                <i class="fas fa-shopping-cart" style="color:#d97706;font-size:1.2rem;"></i>
+                            </div>
+                            <div style="font-weight:700;margin-bottom:.3rem;">Doanh thu đơn hàng Shop</div>
+                            <div style="font-size:.8rem;color:#6b7280;">Xuất CSV danh sách đơn hàng, tổng tiền, trạng thái thanh toán</div>
+                        </div>
+                    </div>
+
+                    <!-- Báo cáo đặt sân -->
+                    <div class="col-md-6">
+                        <div class="report-card border rounded-3 p-3 h-100"
+                             style="cursor:pointer;transition:all .2s;border-color:#e5e7eb!important;"
+                             onmouseover="this.style.borderColor='#3b82f6';this.style.background='#eff6ff'"
+                             onmouseout="this.style.borderColor='#e5e7eb';this.style.background=''"
+                             onclick="exportCSV('bookings')">
+                            <div style="width:44px;height:44px;background:#dbeafe;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:.8rem;">
+                                <i class="fas fa-calendar-check" style="color:#2563eb;font-size:1.2rem;"></i>
+                            </div>
+                            <div style="font-weight:700;margin-bottom:.3rem;">Lịch sử đặt sân</div>
+                            <div style="font-size:.8rem;color:#6b7280;">Xuất CSV danh sách booking, khách hàng, sân, giờ, giá tiền</div>
+                        </div>
+                    </div>
+
+                    <!-- Báo cáo tồn kho -->
+                    <div class="col-md-6">
+                        <div class="report-card border rounded-3 p-3 h-100"
+                             style="cursor:pointer;transition:all .2s;border-color:#e5e7eb!important;"
+                             onmouseover="this.style.borderColor='#10b981';this.style.background='#f0fdf4'"
+                             onmouseout="this.style.borderColor='#e5e7eb';this.style.background=''"
+                             onclick="exportCSV('inventory')">
+                            <div style="width:44px;height:44px;background:#d1fae5;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:.8rem;">
+                                <i class="fas fa-boxes" style="color:#059669;font-size:1.2rem;"></i>
+                            </div>
+                            <div style="font-weight:700;margin-bottom:.3rem;">Báo cáo tồn kho sản phẩm</div>
+                            <div style="font-size:.8rem;color:#6b7280;">Danh sách sản phẩm, số lượng tồn, giá, trạng thái</div>
+                        </div>
+                    </div>
+
+                    <!-- Báo cáo học viên -->
+                    <div class="col-md-6">
+                        <div class="report-card border rounded-3 p-3 h-100"
+                             style="cursor:pointer;transition:all .2s;border-color:#e5e7eb!important;"
+                             onmouseover="this.style.borderColor='#8b5cf6';this.style.background='#f5f3ff'"
+                             onmouseout="this.style.borderColor='#e5e7eb';this.style.background=''"
+                             onclick="exportCSV('students')">
+                            <div style="width:44px;height:44px;background:#ede9fe;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:.8rem;">
+                                <i class="fas fa-user-graduate" style="color:#7c3aed;font-size:1.2rem;"></i>
+                            </div>
+                            <div style="font-weight:700;margin-bottom:.3rem;">Danh sách học viên khóa học</div>
+                            <div style="font-size:.8rem;color:#6b7280;">Học viên đăng ký khóa học cầu lông, HLV kèm, trạng thái</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div style="background:#f8fafc;border-radius:10px;padding:.8rem 1rem;margin-top:1rem;font-size:.78rem;color:#6b7280;display:flex;align-items:center;gap:.5rem;">
+                    <i class="fas fa-info-circle text-primary"></i>
+                    File CSV có thể mở bằng Excel, Google Sheets. Dữ liệu xuất theo thời gian thực.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function exportReport() {
+    new bootstrap.Modal(document.getElementById('reportModal')).show();
+}
+
+function exportCSV(type) {
+    bootstrap.Modal.getInstance(document.getElementById('reportModal'))?.hide();
+
+    const btn = document.createElement('a');
+    btn.href = '../api/export-report.php?type=' + type;
+    btn.download = '';
+    document.body.appendChild(btn);
+    btn.click();
+    document.body.removeChild(btn);
+}
+</script>
