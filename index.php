@@ -15,6 +15,36 @@ $filters = [
 $courts = getCourts($filters);
 $locations = getLocations();
 
+// ── Tìm ưu đãi đang active theo giờ hiện tại ──
+$activePromo = null;
+try {
+    $nowTime   = date('H:i');
+    $dayOfWeek = (int)date('N');
+    $isWeekend = in_array($dayOfWeek, [6, 7]);
+    $promoRes  = $mysqli->query("SELECT * FROM promotions WHERE status=1 AND discount_pct > 0 ORDER BY discount_pct DESC LIMIT 5");
+    if ($promoRes) {
+        while ($pr = $promoRes->fetch_assoc()) {
+            $ok = true;
+            if ($pr['time_start'] && $pr['time_end']) {
+                $ok = ($nowTime >= substr($pr['time_start'],0,5) && $nowTime < substr($pr['time_end'],0,5));
+            }
+            if ($pr['apply_weekend'] && !$isWeekend) $ok = false;
+            if ($ok) {
+                $activePromo = [
+                    'title'      => $pr['title'],
+                    'pct'        => (int)$pr['discount_pct'],
+                    'from'       => $pr['color_from'],
+                    'to'         => $pr['color_to'],
+                    'text'       => $pr['text_color'],
+                    'time_start' => $pr['time_start'] ? substr($pr['time_start'],0,5) : null,
+                    'time_end'   => $pr['time_end']   ? substr($pr['time_end'],0,5)   : null,
+                ];
+                break;
+            }
+        }
+    }
+} catch (Exception $e) {}
+
 // Handle AJAX requests
 if (isset($_GET['ajax']) && $_GET['ajax'] == '1') {
     header('Content-Type: text/html; charset=utf-8');
@@ -626,7 +656,17 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="court-img-wrap">
                         <img src="<?php echo escape($court['cover_image']); ?>" alt="<?php echo escape($court['name']); ?>">
                         <span class="court-badge-status">Còn trống</span>
-                        <span class="court-badge-price"><?php echo number_format($court['price_per_hour']); ?>đ/h</span>
+                        <?php if ($activePromo): ?>
+                            <span class="court-badge-price" style="text-decoration:line-through;opacity:.7;"><?php echo number_format($court['price_per_hour']); ?>đ</span>
+                            <span class="court-badge-price" style="right:12px;top:38px;background:<?php echo $activePromo['from']; ?>;color:<?php echo $activePromo['text']; ?>;">
+                                <?php echo number_format(round($court['price_per_hour'] * (1 - $activePromo['pct']/100))); ?>đ/h
+                            </span>
+                            <span style="position:absolute;top:12px;right:12px;background:linear-gradient(135deg,<?php echo $activePromo['from']; ?>,<?php echo $activePromo['to']; ?>);color:<?php echo $activePromo['text']; ?>;border-radius:8px;padding:2px 8px;font-size:.7rem;font-weight:800;z-index:3;">
+                                -<?php echo $activePromo['pct']; ?>%
+                            </span>
+                        <?php else: ?>
+                            <span class="court-badge-price"><?php echo number_format($court['price_per_hour']); ?>đ/h</span>
+                        <?php endif; ?>
                         <!-- Nút tim + chia sẻ -->
                         <div style="position:absolute;bottom:10px;right:10px;display:flex;flex-direction:column;gap:6px;z-index:2;">
                             <button class="card-action-btn wishlist-btn" title="Yêu thích"

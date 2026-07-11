@@ -77,6 +77,8 @@ $promos = $mysqli->query('SELECT * FROM promotions ORDER BY sort_order ASC, id D
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
+<div class="container-fluid mt-4">
+
 <div class="row mb-4">
     <div class="col-12">
         <div class="card shadow-sm border-0">

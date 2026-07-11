@@ -407,6 +407,14 @@ $active_stmt->close();
             <button class="tab-btn" onclick="switchTab('scan', this)">
                 <i class="fas fa-qrcode me-2"></i>Quét QR
             </button>
+            <?php if ($_SESSION['role'] === 'coach'): ?>
+            <button class="tab-btn" onclick="switchTab('profile', this)">
+                <i class="fas fa-user-edit me-2"></i>Hồ sơ
+            </button>
+            <button class="tab-btn" onclick="switchTab('support', this)">
+                <i class="fas fa-headset me-2"></i>Hỗ trợ
+            </button>
+            <?php endif; ?>
         </div>
 
         <!-- Tab: Tuần này -->
@@ -463,6 +471,19 @@ $statusLabel = ['active'=>['✅','#10b981'],'pending_payment'=>['⏳','#f59e0b']
 $st = $statusLabel[$s['status'] ?? 'pending_payment'] ?? ['?','#9ca3af'];
 ?>
                         <div style="font-size:.72rem;margin-top:4px;color:<?php echo $st[1]; ?>;font-weight:700;"><?php echo $st[0]; ?> <?php echo ucfirst($s['status'] ?? 'pending'); ?></div>
+                        <?php if (($_SESSION['role']==='coach') && in_array($s['status']??'',['pending_payment','active'])): ?>
+                        <div class="d-flex gap-1 mt-1 justify-content-end">
+                            <?php if (($s['status']??'')==='pending_payment'): ?>
+                            <button class="btn btn-xs btn-success" style="font-size:.68rem;padding:2px 7px;"
+                                    onclick="coachAction('approve_student',<?php echo $s['id']; ?>,this)">✓ Duyệt</button>
+                            <button class="btn btn-xs btn-danger" style="font-size:.68rem;padding:2px 7px;"
+                                    onclick="coachAction('reject_student',<?php echo $s['id']; ?>,this)">✗ Từ chối</button>
+                            <?php else: ?>
+                            <button class="btn btn-xs btn-outline-danger" style="font-size:.68rem;padding:2px 7px;"
+                                    onclick="coachAction('reject_student',<?php echo $s['id']; ?>,this)">✗ Huỷ</button>
+                            <?php endif; ?>
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -759,6 +780,98 @@ try {
     </div>
 </div>
 
+        <!-- Tab: Hồ sơ cá nhân -->
+        <?php if ($_SESSION['role'] === 'coach'): ?>
+        <div id="tab-profile" style="display:none;">
+            <div class="row justify-content-center">
+                <div class="col-lg-7">
+                    <div style="background:#fff;border-radius:20px;padding:2rem;box-shadow:0 4px 20px rgba(0,0,0,.08);">
+                        <h5 class="fw-bold mb-4"><i class="fas fa-user-edit me-2 text-primary"></i>Cập nhật thông tin cá nhân</h5>
+                        <form id="profileForm">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Họ và tên <span class="text-danger">*</span></label>
+                                    <input type="text" id="pf_name" name="name" class="form-control" required
+                                           value="<?php echo escape($coach['name'] ?? ''); ?>">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Số điện thoại</label>
+                                    <input type="tel" id="pf_phone" name="phone" class="form-control"
+                                           value="<?php echo escape($coach['phone'] ?? ''); ?>">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Chuyên môn</label>
+                                    <input type="text" id="pf_specialty" name="specialty" class="form-control"
+                                           placeholder="VD: Kỹ thuật cơ bản, tấn công nhanh..."
+                                           value="<?php echo escape($coach['specialty'] ?? ''); ?>">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Năm kinh nghiệm</label>
+                                    <input type="number" id="pf_exp" name="experience_years" class="form-control" min="0" max="50"
+                                           value="<?php echo (int)($coach['experience_years'] ?? 0); ?>">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Tối đa HV/tuần</label>
+                                    <input type="number" id="pf_max" name="max_students_per_week" class="form-control" min="1" max="20"
+                                           value="<?php echo (int)($coach['max_students_per_week'] ?? 3); ?>">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Giới thiệu bản thân</label>
+                                    <textarea id="pf_bio" name="bio" class="form-control" rows="4"
+                                              placeholder="Chia sẻ về kinh nghiệm, phong cách huấn luyện..."><?php echo escape($coach['bio'] ?? ''); ?></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <div id="profileMsg" style="display:none;" class="alert mb-0"></div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary fw-bold px-4 py-2">
+                                        <i class="fas fa-save me-2"></i>Lưu thay đổi
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Gửi yêu cầu hỗ trợ -->
+        <div id="tab-support" style="display:none;">
+            <div class="row justify-content-center">
+                <div class="col-lg-7">
+                    <div style="background:#fff;border-radius:20px;padding:2rem;box-shadow:0 4px 20px rgba(0,0,0,.08);margin-bottom:1.5rem;">
+                        <h5 class="fw-bold mb-4"><i class="fas fa-paper-plane me-2 text-primary"></i>Gửi yêu cầu hỗ trợ</h5>
+                        <form id="supportForm">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Tiêu đề yêu cầu <span class="text-danger">*</span></label>
+                                <input type="text" id="sp_subject" name="subject" class="form-control" required
+                                       placeholder="VD: Cần điều chỉnh lịch tuần, thêm học viên...">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Nội dung chi tiết <span class="text-danger">*</span></label>
+                                <textarea id="sp_message" name="message" class="form-control" rows="5" required
+                                          placeholder="Mô tả chi tiết yêu cầu của bạn..."></textarea>
+                            </div>
+                            <div id="supportMsg" style="display:none;" class="alert mb-3"></div>
+                            <button type="submit" class="btn fw-bold px-4 py-2"
+                                    style="background:linear-gradient(135deg,#302b63,#6366f1);color:#fff;border:none;border-radius:12px;">
+                                <i class="fas fa-paper-plane me-2"></i>Gửi yêu cầu
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Lịch sử tickets -->
+                    <div style="background:#fff;border-radius:20px;padding:2rem;box-shadow:0 4px 20px rgba(0,0,0,.08);">
+                        <h6 class="fw-bold mb-3"><i class="fas fa-history me-2 text-muted"></i>Yêu cầu đã gửi</h6>
+                        <div id="ticketList">
+                            <div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
 <!-- Modal hiển thị QR học viên -->
 <div class="modal fade" id="studentQRModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered" style="max-width:360px;">
@@ -883,6 +996,138 @@ function lookupStudent() {
 // Enter để tìm kiếm
 document.getElementById('scanInput')?.addEventListener('keydown', e => {
     if (e.key === 'Enter') lookupStudent();
+});
+
+// ═══════════════ DUYỆT / TỪ CHỐI HỌC VIÊN ═══════════════
+function coachAction(action, regId, btn) {
+    const labels = { approve_student: 'duyệt', reject_student: 'từ chối/huỷ' };
+    if (!confirm('Bạn có chắc muốn ' + (labels[action]||action) + ' học viên này?')) return;
+
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    const fd = new FormData();
+    fd.append('action', action);
+    fd.append('reg_id', regId);
+
+    fetch('../api/coach-actions.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                // Toast nhỏ
+                showCoachToast(d.message, action === 'approve_student' ? 'success' : 'warning');
+                setTimeout(() => location.reload(), 1200);
+            } else {
+                alert(d.error || 'Lỗi xảy ra.');
+                btn.disabled = false;
+                btn.textContent = action === 'approve_student' ? '✓ Duyệt' : '✗ Từ chối';
+            }
+        })
+        .catch(() => { alert('Lỗi kết nối.'); btn.disabled = false; });
+}
+
+// ═══════════════ CẬP NHẬT HỒ SƠ ═══════════════
+document.getElementById('profileForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn  = this.querySelector('button[type=submit]');
+    const msgEl = document.getElementById('profileMsg');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Đang lưu...';
+
+    const fd = new FormData(this);
+    fd.append('action', 'update_profile');
+
+    fetch('../api/coach-actions.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(d => {
+            msgEl.style.display = 'block';
+            msgEl.className = 'alert ' + (d.success ? 'alert-success' : 'alert-danger');
+            msgEl.textContent = d.message || d.error;
+            if (d.success) showCoachToast(d.message, 'success');
+        })
+        .catch(() => {
+            msgEl.style.display = 'block';
+            msgEl.className = 'alert alert-danger';
+            msgEl.textContent = 'Lỗi kết nối.';
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-save me-2"></i>Lưu thay đổi';
+        });
+});
+
+// ═══════════════ GỬI YÊU CẦU HỖ TRỢ ═══════════════
+document.getElementById('supportForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const btn   = this.querySelector('button[type=submit]');
+    const msgEl = document.getElementById('supportMsg');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Đang gửi...';
+
+    const fd = new FormData(this);
+    fd.append('action', 'send_support');
+
+    fetch('../api/coach-actions.php', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(d => {
+            msgEl.style.display = 'block';
+            msgEl.className = 'alert ' + (d.success ? 'alert-success' : 'alert-danger');
+            msgEl.textContent = d.message || d.error;
+            if (d.success) {
+                this.reset();
+                loadSupportTickets(); // Reload danh sách
+            }
+        })
+        .catch(() => { msgEl.style.display='block'; msgEl.className='alert alert-danger'; msgEl.textContent='Lỗi kết nối.'; })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Gửi yêu cầu';
+        });
+});
+
+// Load danh sách tickets
+function loadSupportTickets() {
+    const el = document.getElementById('ticketList');
+    if (!el) return;
+
+    fetch('../api/coach-actions.php?action=get_tickets')
+        .then(r => r.json())
+        .then(d => {
+            if (!d.tickets || !d.tickets.length) {
+                el.innerHTML = '<p class="text-muted small text-center py-3">Chưa có yêu cầu nào.</p>';
+                return;
+            }
+            const sColors = { open:'#f59e0b', answered:'#10b981', closed:'#9ca3af' };
+            const sLabels = { open:'Đang chờ', answered:'Đã phản hồi', closed:'Đã đóng' };
+            el.innerHTML = d.tickets.map(t => `
+                <div style="border:1px solid #e5e7eb;border-radius:12px;padding:.9rem 1.1rem;margin-bottom:.6rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;">
+                        <div style="font-weight:700;font-size:.88rem;">${t.subject}</div>
+                        <span style="font-size:.72rem;font-weight:700;color:${sColors[t.status]||'#9ca3af'};background:${sColors[t.status]+'22'};border-radius:20px;padding:2px 10px;">
+                            ${sLabels[t.status]||t.status}
+                        </span>
+                    </div>
+                    <div style="font-size:.75rem;color:#9ca3af;">${new Date(t.created_at).toLocaleString('vi-VN')}</div>
+                    ${t.admin_reply ? `<div style="margin-top:.5rem;background:#f0fdf4;border-radius:8px;padding:.5rem .8rem;font-size:.8rem;color:#166534;"><i class="fas fa-reply me-1"></i><strong>Admin phản hồi:</strong> ${t.admin_reply}</div>` : ''}
+                </div>
+            `).join('');
+        })
+        .catch(() => { if(el) el.innerHTML = '<p class="text-muted small">Lỗi tải dữ liệu.</p>'; });
+}
+
+// Toast thông báo nhỏ
+function showCoachToast(msg, type='success') {
+    const colors = { success:'#10b981', warning:'#f59e0b', danger:'#ef4444' };
+    const t = document.createElement('div');
+    t.style.cssText = `position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;background:${colors[type]||'#374151'};color:#fff;padding:.75rem 1.2rem;border-radius:12px;font-weight:700;font-size:.88rem;box-shadow:0 8px 25px rgba(0,0,0,.2);animation:slideUp .3s ease;`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+}
+
+// Auto-load tickets khi vào tab Hỗ trợ
+document.addEventListener('DOMContentLoaded', () => {
+    loadSupportTickets();
 });
 </script>
 
