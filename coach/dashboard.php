@@ -634,7 +634,7 @@ $st = $statusLabel[$s['status'] ?? 'pending_payment'] ?? ['?','#9ca3af'];
                     </div>
                     <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:.9rem 1.1rem;">
                         <div style="color:rgba(255,255,255,.55);font-size:.72rem;margin-bottom:.3rem;">Số tài khoản</div>
-                        <div style="font-weight:800;font-family:monospace;font-size:1rem;color:#fbbf24;letter-spacing:1px;">0968073500</div>
+                        <div style="font-weight:800;font-family:monospace;font-size:1rem;color:#fbbf24;letter-spacing:1px;">7369786789</div>
                     </div>
                     <div style="background:rgba(255,255,255,.08);border-radius:12px;padding:.9rem 1.1rem;">
                         <div style="color:rgba(255,255,255,.55);font-size:.72rem;margin-bottom:.3rem;">Chủ tài khoản</div>

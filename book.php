@@ -211,14 +211,49 @@ if ($use_member_price && $membership) {
     );
 }
 
-// Gửi thông báo đặt sân thành công
-try {
-    require_once __DIR__ . '/includes/notification-system.php';
-    $ns = new NotificationSystem();
-    $ns->notifyBookingConfirmed($booking_id);
-} catch (Exception $e) { /* Không để lỗi ảnh hưởng flow đặt sân */ }
+// Gửi thông báo đặt sân thành công - chỉ khi tiền mặt (cash), còn chuyển khoản chờ webhook xác nhận
+if ($payment_method === 'cash') {
+    try {
+        require_once __DIR__ . '/includes/notification-system.php';
+        $ns = new NotificationSystem();
+        $ns->notifyBookingConfirmed($booking_id);
+    } catch (Exception $e) { /* Không để lỗi ảnh hưởng flow */ }
+}
 
 // Xử lý theo phương thức thanh toán
+// Nếu là AJAX request (từ booking-online.js), luôn trả JSON thành công
+// Frontend đã xử lý QR/xác nhận chuyển khoản, backend chỉ cần lưu DB
+if ($isAjax) {
+    // Với momo/vnpay: payment_status = 'pending', cần chờ xác nhận thực từ SePay webhook
+    // Với cash: payment_status = 'unpaid'
+    $message = ($payment_method === 'cash')
+        ? 'Đặt sân thành công! Vui lòng thanh toán khi đến sân.'
+        : 'Đơn đặt sân đã tạo! Vui lòng chuyển khoản và nhấn "Kiểm tra thanh toán".';
+
+    // Tạo nội dung chuyển khoản có mã booking để SePay parse
+    $transfer_ref = 'DATSAN' . str_pad($booking_id, 5, '0', STR_PAD_LEFT);
+
+    echo json_encode([
+        'success'        => true,
+        'booking_id'     => $booking_id,
+        'message'        => $message,
+        'court_name'     => $court['name'],
+        'booking_date'   => $date,
+        'start_time'     => $start_time_full,
+        'end_time'       => $end_time_full,
+        'total_price'    => $total_price,
+        'original_price' => $original_price ?? $total_price,
+        'discount_amount'=> $promo_discount ?? 0,
+        'promo_applied'  => $promo_applied ?? '',
+        'payment_method' => $payment_method,
+        'transfer_ref'   => $transfer_ref,
+        'needs_payment'  => in_array($payment_method, ['momo', 'vnpay']),
+        'redirect'       => 'booking-history.php'
+    ]);
+    exit;
+}
+
+// Non-AJAX (direct form submit fallback)
 if ($payment_method === 'vnpay' && class_exists('PaymentGateway')) {
     $vnpay_url = PaymentGateway::generateVNPayLink($booking_id, $total_price, 'Đặt sân - ' . $court['name'], $user_id);
     redirect($vnpay_url);
@@ -228,26 +263,6 @@ if ($payment_method === 'vnpay' && class_exists('PaymentGateway')) {
     redirect('payment-momo.php?booking_id=' . $booking_id);
 
 } else {
-    // Tiền mặt hoặc fallback
     $_SESSION['booking_success'] = 'Đặt sân thành công! Vui lòng thanh toán khi đến sân.';
-
-    if ($isAjax) {
-        echo json_encode([
-            'success'        => true,
-            'booking_id'     => $booking_id,
-            'message'        => 'Đặt sân thành công!',
-            'court_name'     => $court['name'],
-            'booking_date'   => $date,
-            'start_time'     => $start_time_full,
-            'end_time'       => $end_time_full,
-            'total_price'    => $total_price,
-            'original_price' => $original_price ?? $total_price,
-            'discount_amount'=> $promo_discount ?? 0,
-            'promo_applied'  => $promo_applied ?? '',
-            'redirect'       => 'booking-history.php'
-        ]);
-        exit;
-    }
-
     redirect('booking-history.php');
 }

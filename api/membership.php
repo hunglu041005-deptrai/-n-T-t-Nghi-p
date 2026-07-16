@@ -153,9 +153,12 @@ if ($action === '' || $action === 'register') {
         $check->close();
     } while ($exists);
 
-    // Cash = pending, còn lại = paid (demo — production cần redirect gateway)
-    $payment_status = ($payment_method === 'cash') ? 'pending' : 'paid';
-    $status         = 'active';
+    // Cash = active ngay, bank/momo = pending_payment (chờ webhook xác nhận thật)
+    $payment_status = ($payment_method === 'cash') ? 'paid'    : 'pending';
+    $status         = ($payment_method === 'cash') ? 'active'  : 'pending_payment';
+
+    // Nếu cash: thông báo ngay; nếu chuyển khoản: không thông báo vội
+    $send_notify = ($payment_method === 'cash');
 
     $stmt = $mysqli->prepare(
         'INSERT INTO memberships
@@ -180,17 +183,14 @@ if ($action === '' || $action === 'register') {
     $membership_id = $stmt->insert_id;
     $stmt->close();
 
-    // Gửi thông báo
-    try {
-        require_once __DIR__ . '/../includes/notification-system.php';
-        $ns = new NotificationSystem();
-        $ns->notifyMembershipActivated(
-            $user_id,
-            $member_code,
-            $plan['name'] . ': ' . $plan['detail'],
-            $end_date
-        );
-    } catch (Exception $e) {}
+    // Gửi thông báo chỉ khi cash (chuyển khoản chờ webhook)
+    if ($send_notify) {
+        try {
+            require_once __DIR__ . '/../includes/notification-system.php';
+            $ns = new NotificationSystem();
+            $ns->notifyMembershipActivated($user_id, $member_code, $plan['name'] . ': ' . $plan['detail'], $end_date);
+        } catch (Exception $e) {}
+    }
 
     echo json_encode([
         'success'           => true,

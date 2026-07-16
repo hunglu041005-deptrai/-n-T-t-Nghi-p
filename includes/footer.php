@@ -45,7 +45,7 @@
                 <p class="text-muted small mb-0">© 2026 BadmintonPro. Tất cả các quyền được bảo lưu.</p>
             </div>
             <div class="col-md-6 text-md-end">
-                <img src="https://via.placeholder.com/200x40?text=VNPay+MoMo" alt="Payment methods" style="height: 30px; opacity: 0.7;">
+                <img src="https://via.placeholder.com/200x40?text=MB+Bank+MoMo" alt="Payment methods" style="height: 30px; opacity: 0.7;">
             </div>
         </div>
     </div>

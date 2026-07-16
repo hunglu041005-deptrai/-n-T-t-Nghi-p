@@ -772,7 +772,7 @@ $plans = [
                                 </h2>
                                 <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                                     <div class="accordion-body px-0 pt-0 pb-3" style="font-size:.82rem;color:#6b7280;">
-                                        Hỗ trợ MoMo, VNPay, chuyển khoản ngân hàng và tiền mặt tại sân.
+                                        Hỗ trợ MoMo, MB Bank, chuyển khoản ngân hàng và tiền mặt tại sân.
                                     </div>
                                 </div>
                             </div>
@@ -784,6 +784,9 @@ $plans = [
         </div>
     </div>
 </div>
+
+<!-- ===== MEMBERSHIP WAITING CONTAINER (hiện khi chờ chuyển khoản) ===== -->
+<div id="membershipWaitingContainer" style="display:none;"></div>
 
 <!-- ===== PAYMENT MODAL ===== -->
 <div class="modal fade" id="paymentModal" tabindex="-1">
@@ -870,7 +873,7 @@ $plans = [
                                 </div>
                             </label>
 
-                            <!-- VNPay -->
+                            <!-- MB Bank -->
                             <label class="pm-method-card" data-method="vnpay">
                                 <input type="radio" name="pm_method" value="vnpay" style="display:none;">
                                 <div class="d-flex align-items-center gap-3">
@@ -878,7 +881,7 @@ $plans = [
                                         <i class="fas fa-university" style="color:#3b82f6;font-size:1.1rem;"></i>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <div class="fw-bold" style="font-size:.9rem;">VNPay</div>
+                                    <div class="fw-bold" style="font-size:.9rem;">MB Bank</div>
                                         <div style="font-size:.78rem;color:#9ca3af;">Thanh toán qua ngân hàng</div>
                                     </div>
                                     <div class="pm-check" style="opacity:0;"><i class="fas fa-check-circle text-success"></i></div>
@@ -1103,9 +1106,15 @@ document.getElementById('btn-confirm-payment').addEventListener('click', functio
         .then(data => {
             if (data.success) {
                 bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-                showMemberCard(data);
+
+                if (method === 'cash') {
+                    // Tiền mặt: hiện card ngay
+                    showMemberCard(data);
+                } else {
+                    // Chuyển khoản: hiện QR + polling tự động
+                    showTransferWaiting(data);
+                }
             } else if (data.existing) {
-                // Đã có gói active
                 alert(`⚠️ ${data.error}`);
             } else {
                 alert('Lỗi: ' + data.error);
@@ -1117,6 +1126,60 @@ document.getElementById('btn-confirm-payment').addEventListener('click', functio
             btn.disabled  = false;
         });
 });
+
+// Hiển thị trang chờ chuyển khoản + polling
+function showTransferWaiting(data) {
+    const mid    = data.membership_id;
+    const code   = data.member_code;
+    const amount = data.price;
+    const method = data.payment_method;
+    const enc    = encodeURIComponent(code);
+
+    const qrUrl = method === 'momo'
+        ? `https://img.vietqr.io/image/MOMO-0968073500-qr_only.png?amount=${amount}&addInfo=${enc}&accountName=LU+DANG+HUNG`
+        : `https://img.vietqr.io/image/MB-7369786789-qr_only.png?amount=${amount}&addInfo=${enc}&accountName=LU+DANG+HUNG`;
+
+    const isMomo = method === 'momo';
+    const color  = isMomo ? '#db2777' : '#6366f1';
+    const bg     = isMomo ? '#fdf2f8' : '#fffbeb';
+    const border = isMomo ? '#f9a8d4' : '#fde68a';
+
+    // Tạo container hiển thị
+    const container = document.getElementById('membershipWaitingContainer');
+    if (container) {
+        container.style.display = 'block';
+        container.innerHTML = `
+            <div style="background:${bg};border:1px solid ${border};border-radius:18px;padding:1.5rem;max-width:480px;margin:2rem auto;text-align:center;">
+                <div style="font-weight:800;color:${color};margin-bottom:1rem;font-size:1rem;">
+                    <i class="fas fa-${isMomo ? 'wallet' : 'university'} me-2"></i>
+                    Chuyển khoản để kích hoạt hội viên
+                </div>
+                <img src="${qrUrl}" alt="QR" style="width:150px;height:150px;border-radius:14px;border:2px solid ${border};padding:4px;background:#fff;margin-bottom:1rem;">
+                <div style="font-size:.88rem;text-align:left;display:grid;gap:.4rem;margin-bottom:1rem;">
+                    ${isMomo
+                        ? `<div><span style="color:#78716c;min-width:120px;display:inline-block;">Số điện thoại</span> <strong style="color:${color};font-family:monospace;">0968073500</strong></div>`
+                        : `<div><span style="color:#78716c;min-width:120px;display:inline-block;">Ngân hàng</span> <strong>MB Bank</strong></div>
+                           <div><span style="color:#78716c;min-width:120px;display:inline-block;">Số tài khoản</span> <strong style="font-family:monospace;color:${color};">7369786789</strong></div>`
+                    }
+                    <div><span style="color:#78716c;min-width:120px;display:inline-block;">Chủ tài khoản</span> <strong>LU DANG HUNG</strong></div>
+                    <div><span style="color:#78716c;min-width:120px;display:inline-block;">Số tiền</span> <strong style="color:${color};">${parseInt(amount).toLocaleString('vi-VN')}đ</strong></div>
+                    <div><span style="color:#78716c;min-width:120px;display:inline-block;">Nội dung CK</span> <strong style="font-family:monospace;color:${color};">${code}</strong></div>
+                </div>
+                <div id="membershipWaitingBox"></div>
+            </div>`;
+
+        if (typeof PaymentPolling !== 'undefined') {
+            PaymentPolling.showWaitingBox('membershipWaitingBox', code);
+            PaymentPolling.start('membership_id=' + mid, function() {
+                PaymentPolling.showSuccessToast(
+                    'Hội viên đã được kích hoạt thành công!',
+                    window.location.href,
+                    2000
+                );
+            }, 'membershipWaitingBox');
+        }
+    }
+}
 
 function showMemberCard(data) {
     document.getElementById('mc-code').textContent    = data.member_code;
@@ -1214,3 +1277,4 @@ function showTicketLog(membershipId) {
 </script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
+<script src="assets/js/payment-polling.js"></script>

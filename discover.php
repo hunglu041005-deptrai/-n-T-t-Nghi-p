@@ -116,7 +116,7 @@ require_once __DIR__ . '/includes/header.php';
                                     </div>
                                     <div class="feature-item d-flex align-items-center mb-2">
                                         <i class="fas fa-check-circle text-success me-2"></i>
-                                        <span>Thanh toán MoMo, VNPay</span>
+                                        <span>Thanh toán MoMo, MB Bank</span>
                                     </div>
                                     <div class="feature-item d-flex align-items-center mb-2">
                                         <i class="fas fa-check-circle text-success me-2"></i>

@@ -1,4 +1,4 @@
-// Enhanced Booking Online JavaScript with Beautiful UI
+﻿// Enhanced Booking Online JavaScript with Beautiful UI
 document.addEventListener('DOMContentLoaded', function() {
     console.log('=== Enhanced Booking page loaded ===');
     
@@ -474,24 +474,20 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Kiểm tra checkbox xác nhận chuyển khoản (inline panels trong booking-online.php)
-        if (paymentMethod === 'momo') {
-            const cb = document.getElementById('bookingMomoConfirm');
-            if (cb && !cb.checked) {
-                showAlert('Vui lòng xác nhận đã chuyển khoản qua MoMo', 'warning');
-                return;
-            }
-        }
-        if (paymentMethod === 'vnpay') {
-            const cb = document.getElementById('bookingBankConfirm');
-            if (cb && !cb.checked) {
-                showAlert('Vui lòng xác nhận đã chuyển khoản ngân hàng', 'warning');
-                return;
-            }
+        // Nếu đang ở trạng thái chờ thanh toán chuyển khoản → không cho nhấn lại
+        if (window._pendingBookingId && (paymentMethod === 'momo' || paymentMethod === 'vnpay')) {
+            showAlert('Đơn đã tạo. Vui lòng chuyển khoản và chờ hệ thống xác nhận tự động.', 'info');
+            return;
         }
 
-        // Tất cả hợp lệ → submit thẳng (không cần modal nữa)
-        submitBooking(paymentMethod, this);
+        // Tiền mặt → submit thẳng
+        if (paymentMethod === 'cash') {
+            submitBooking(paymentMethod, this);
+            return;
+        }
+
+        // MoMo / MB Bank → tạo booking pending rồi auto-polling
+        submitPendingBooking(paymentMethod, this);
     });
 
     // Show the payment confirmation modal with correct info
@@ -557,7 +553,151 @@ document.addEventListener('DOMContentLoaded', function() {
         submitBooking(pm, btn);
     };
 
-    // Core booking submission function (extracted from the click handler)
+    // ── Tạo booking pending (chuyển khoản) ────────────────────────────────
+    // -- Tao booking pending va auto-polling ---------------------------------
+    function submitPendingBooking(paymentMethod, btn) {
+        // Reset flag khi bắt đầu đặt mới
+        window._paymentDone = false;
+        if (btn) {
+            btn.innerHTML = '<div class="spinner-border spinner-border-sm me-2"></div>Dang tao don...';
+            btn.disabled = true;
+        }
+        const bookingData = {
+            court_id:       bookingState.selectedCourt.id,
+            booking_date:   bookingState.selectedDate,
+            start_time:     bookingState.selectedTime,
+            duration:       bookingState.selectedDuration,
+            payment_method: paymentMethod,
+            notes:          document.getElementById('bookingNotes')?.value || ''
+        };
+        fetch('book.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+            body: new URLSearchParams(bookingData)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) throw new Error(data.error || 'Loi tao don');
+            window._pendingBookingId   = data.booking_id;
+            window._pendingTransferRef = data.transfer_ref;
+            window._pendingAmount      = data.total_price;
+            const ref = data.transfer_ref, amount = data.total_price, enc = encodeURIComponent(ref);
+            if (paymentMethod === 'momo') {
+                const qr = document.getElementById('bookingMomoQr');
+                if (qr) qr.src = `https://img.vietqr.io/image/MOMO-0968073500-qr_only.png?amount=${amount}&addInfo=${enc}&accountName=LU+DANG+HUNG`;
+                const re = document.getElementById('bookingMomoRef');   if (re) re.textContent = ref;
+                const ae = document.getElementById('bookingMomoAmount'); if (ae) ae.textContent = amount.toLocaleString('vi-VN') + 'd';
+            } else {
+                const qr = document.getElementById('bookingBankQr');
+                if (qr) qr.src = `https://img.vietqr.io/image/MB-7369786789-qr_only.png?amount=${amount}&addInfo=${enc}&accountName=LU+DANG+HUNG`;
+                const re = document.getElementById('bookingBankRef');   if (re) re.textContent = ref;
+                const ae = document.getElementById('bookingBankAmount'); if (ae) ae.textContent = amount.toLocaleString('vi-VN') + 'd';
+            }
+            if (btn) {
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px;"></span>Dang cho thanh toan...';
+                btn.disabled  = true;
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-primary');
+            }
+            const noteBox = document.getElementById('transferWaitingNote');
+            if (noteBox) {
+                noteBox.innerHTML = `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:1rem 1.2rem;margin-top:1rem;"><div style="font-weight:700;color:#166534;margin-bottom:.4rem;"><i class="fas fa-circle-notch fa-spin me-1"></i>Dang cho thanh toan tu dong</div><div style="font-size:.84rem;color:#15803d;margin-bottom:.35rem;">Chuyen khoan noi dung: <strong style="font-family:monospace;background:#dcfce7;padding:2px 7px;border-radius:4px;">${ref}</strong></div><div style="font-size:.78rem;color:#166534;"><i class="fas fa-magic me-1"></i>He thong <strong>tu dong xac nhan</strong> khi nhan duoc tien.</div><div style="margin-top:.6rem;height:4px;background:#dcfce7;border-radius:4px;overflow:hidden;"><div id="pollingProgressBar" style="height:100%;background:#16a34a;width:0%;transition:width 5s linear;"></div></div></div>`;
+                noteBox.style.display = 'block';
+                setTimeout(() => { const b = document.getElementById('pollingProgressBar'); if (b) b.style.width = '100%'; }, 100);
+            }
+            startAutoPolling(data.booking_id, btn);
+        })
+        .catch(err => {
+            console.error('Pending booking error:', err);
+            showAlert('Loi tao don: ' + err.message, 'error');
+            if (btn) { btn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Thanh toan'; btn.disabled = false; }
+        });
+    }
+
+    let _pollingTimer = null;
+
+    function startAutoPolling(bookingId, btn) {
+        if (_pollingTimer) clearInterval(_pollingTimer);
+        let attempts = 0, maxAttempts = 72;
+        _pollingTimer = setInterval(() => {
+            attempts++;
+            const bar = document.getElementById('pollingProgressBar');
+            if (bar) { bar.style.transition = 'none'; bar.style.width = '0%'; setTimeout(() => { bar.style.transition = 'width 5s linear'; bar.style.width = '100%'; }, 50); }
+            checkPaymentStatus(bookingId);
+            if (attempts >= maxAttempts) {
+                clearInterval(_pollingTimer); _pollingTimer = null;
+                if (btn) { btn.innerHTML = '<i class="fas fa-redo me-2"></i>Thu lai'; btn.disabled = false; window._pendingBookingId = null; }
+                const nb = document.getElementById('transferWaitingNote');
+                if (nb) nb.innerHTML = `<div style="background:#fff7ed;border:1.5px solid #fed7aa;border-radius:12px;padding:1rem;color:#9a3412;font-size:.85rem;"><i class="fas fa-exclamation-triangle me-1"></i> Het thoi gian cho. Lien he ho tro voi ma don <strong>${window._pendingTransferRef}</strong>.</div>`;
+            }
+        }, 5000);
+    }
+
+    function checkPaymentStatus(bookingId) {
+        // Nếu đã xử lý xong thì bỏ qua
+        if (window._paymentDone) return;
+
+        fetch(`api/check-payment-status.php?booking_id=${bookingId}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.paid) return;
+
+            // Đánh dấu đã xong - tránh xử lý lại
+            window._paymentDone = true;
+
+            // Dừng polling NGAY LẬP TỨC
+            if (_pollingTimer) { clearInterval(_pollingTimer); _pollingTimer = null; }
+
+            // Ẩn panels
+            ['bookingBankPanel','bookingMomoPanel','transferWaitingNote'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+
+            // Điền thông tin modal
+            const codeEl = document.getElementById('bookingCode');
+            if (codeEl) codeEl.textContent = 'BK' + bookingId;
+            const nameEl = document.getElementById('finalCourtName');
+            if (nameEl) nameEl.textContent = bookingState.selectedCourt?.name || '';
+            const dtEl = document.getElementById('finalDateTime');
+            if (dtEl) dtEl.textContent =
+                (bookingState.selectedDate ? new Date(bookingState.selectedDate).toLocaleDateString('vi-VN') : '') +
+                (bookingState.selectedTime ? ' - ' + bookingState.selectedTime + ' den ' + (bookingState.selectedEndTime || '') : '');
+            const totalEl = document.getElementById('finalTotal');
+            if (totalEl) totalEl.textContent = (bookingState.totalPrice || window._pendingAmount || 0).toLocaleString('vi-VN') + 'd';
+
+            const ne = document.getElementById('bookingSuccessNote');
+            if (ne) {
+                ne.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i> Da nhan thanh toan - dat san thanh cong!';
+                ne.style.display = 'block';
+            }
+
+            // Hiện modal
+            const modalEl = document.getElementById('bookingSuccessModal');
+            if (modalEl) {
+                new bootstrap.Modal(modalEl).show();
+            }
+
+            window._pendingBookingId   = null;
+            window._pendingTransferRef = null;
+
+            // Countdown hiển thị
+            const countEl = document.getElementById('redirectCountdown');
+            let countdown = 2;
+            const countTimer = setInterval(() => {
+                countdown--;
+                if (countEl) countEl.textContent = countdown;
+                if (countdown <= 0) clearInterval(countTimer);
+            }, 1000);
+
+            // Redirect sau 2 giây
+            window._redirectTimer = setTimeout(() => {
+                window.location.href = 'booking-history.php';
+            }, 2000);
+        })
+        .catch(() => {});
+    }
+    // Core booking submission function (cash only)
     function submitBooking(paymentMethod, btn) {
         // Show loading
         if (btn) {
@@ -610,6 +750,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     `${new Date(bookingState.selectedDate).toLocaleDateString('vi-VN')} - ${bookingState.selectedTime} đến ${bookingState.selectedEndTime}`;
                 document.getElementById('finalTotal').textContent     = `${bookingState.totalPrice.toLocaleString()}đ`;
 
+                // Thêm ghi chú nếu thanh toán chuyển khoản (đang chờ xác nhận)
+                const pm = data.payment_method || 'cash';
+                const noteEl = document.getElementById('bookingSuccessNote');
+                if (noteEl) {
+                    if (pm === 'momo') {
+                        noteEl.innerHTML = '<i class="fas fa-clock text-warning me-1"></i> Đơn đặt sân đang chờ xác nhận thanh toán MoMo.';
+                        noteEl.style.display = 'block';
+                    } else if (pm === 'vnpay') {
+                        noteEl.innerHTML = '<i class="fas fa-clock text-warning me-1"></i> Đơn đặt sân đang chờ xác nhận chuyển khoản MB Bank.';
+                        noteEl.style.display = 'block';
+                    } else {
+                        noteEl.style.display = 'none';
+                    }
+                }
+
                 // Hiện modal thành công
                 const successModal = new bootstrap.Modal(document.getElementById('bookingSuccessModal'));
                 successModal.show();
@@ -621,7 +776,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 // Redirect sang lịch sử sau 3 giây
-                setTimeout(() => { window.location.href = 'booking-history.php'; }, 3000);
+                setTimeout(() => { window.location.href = 'booking-history.php'; }, 2000);
 
             } else {
                 throw new Error(data.error || 'Có lỗi xảy ra khi đặt sân');
@@ -662,7 +817,44 @@ document.addEventListener('DOMContentLoaded', function() {
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('bookingDate').value = today;
     bookingState.selectedDate = today;
-    
+
+    // Auto-select preselected court if coming from URL ?court_id=xxx
+    if (window._preselectedCourt) {
+        const pc = window._preselectedCourt;
+        const courtId = pc.id;
+        const selectBtn = document.querySelector(`.select-court-btn[data-court-id="${courtId}"]`);
+
+        if (selectBtn) {
+            // Set bookingState immediately (no wait needed)
+            bookingState.selectedCourt = {
+                id:    courtId,
+                name:  pc.name,
+                price: pc.price
+            };
+
+            // Highlight card
+            const card = selectBtn.closest('.court-booking-card');
+            if (card) {
+                card.classList.add('selected-court');
+                card.style.border = '2px solid #007bff';
+                card.style.backgroundColor = '#f8f9ff';
+                setTimeout(() => {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 200);
+            }
+
+            // Update step 2 info
+            document.getElementById('selectedCourtName').textContent = pc.name;
+            document.getElementById('selectedCourtPrice').textContent = `Giá: ${pc.price.toLocaleString()}đ/giờ`;
+
+            // Auto-proceed to step 2 after short delay
+            setTimeout(() => {
+                showStep(2);
+                loadTimeSlots();
+            }, 800);
+        }
+    }
+
     console.log('Enhanced booking system initialized');
 });
 

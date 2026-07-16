@@ -48,6 +48,7 @@ if (!$isAdminPage && isAdmin()) {
                     <li class="nav-item"><a class="nav-link" href="promotions.php"><i class="fas fa-gift me-1"></i> Ưu đãi</a></li>
                     <li class="nav-item"><a class="nav-link" href="coaches.php"><i class="fas fa-chalkboard-teacher me-1"></i> HLV</a></li>
                     <li class="nav-item"><a class="nav-link" href="support.php"><i class="fas fa-headset me-1"></i> Hỗ trợ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="payment-transactions.php"><i class="fas fa-exchange-alt me-1"></i> Giao dịch</a></li>
                 <?php else: ?>
                     <li class="nav-item"><a class="nav-link active" href="index.php">Trang chủ</a></li>
                     <li class="nav-item"><a class="nav-link" href="featured.php">Nổi bật</a></li>

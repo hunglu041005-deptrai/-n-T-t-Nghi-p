@@ -146,7 +146,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 $method_display = [
                                     'cash' => '💵 Tiền mặt',
                                     'momo' => '🟣 MoMo',
-                                    'vnpay' => '🔵 VNPay'
+                                    'vnpay' => '🔵 MB Bank'
                                 ][$stat['payment_method']] ?? ucfirst($stat['payment_method']);
                                 
                                 $status_badge = [

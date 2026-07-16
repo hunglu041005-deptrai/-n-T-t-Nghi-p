@@ -277,16 +277,13 @@ require_once __DIR__ . '/includes/header.php';
                                 <i class="fas fa-info-circle me-1"></i>
                                 Mở app MoMo → Quét QR hoặc Chuyển tiền → Nhập SĐT → Điền đúng nội dung
                             </div>
-                            <div style="margin-top:.85rem;padding:.75rem 1rem;background:#fff;border:1.5px solid #f9a8d4;border-radius:10px;display:flex;align-items:center;gap:.7rem;">
-                                <input type="checkbox" id="bookingMomoConfirm" onchange="updateBookingConfirmBtn()"
-                                       style="width:18px;height:18px;accent-color:#db2777;cursor:pointer;flex-shrink:0;">
-                                <label for="bookingMomoConfirm" style="font-size:.84rem;font-weight:600;color:#374151;cursor:pointer;margin:0;">
-                                    Tôi đã chuyển khoản thành công qua MoMo
-                                </label>
+                            <div style="margin-top:.85rem;padding:.65rem 1rem;background:#fce7f3;border-radius:10px;font-size:.82rem;color:#be185d;">
+                                <i class="fas fa-arrow-down me-1"></i>
+                                Nhấn <strong>"Tạo đơn & Hiện QR"</strong> → chuyển khoản → nhấn <strong>"Kiểm tra thanh toán"</strong>
                             </div>
                         </div>
 
-                        <!-- VNPay -->
+                        <!-- MB Bank -->
                         <div class="payment-option pay-opt" data-method="vnpay" onclick="selectBookingPM('vnpay',this)">
                             <div class="payment-card border rounded-3 p-3" style="cursor:pointer;transition:all .2s;">
                                 <div class="d-flex align-items-center">
@@ -295,26 +292,26 @@ require_once __DIR__ . '/includes/header.php';
                                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V10M19 21V10" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round"/><path d="M2 10l10-7 10 7" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="9" y="14" width="6" height="7" rx="1" fill="#2563eb" opacity=".15" stroke="#2563eb" stroke-width="1.5"/></svg>
                                     </div>
                                     <div>
-                                        <div class="fw-bold">VNPay / MB Bank</div>
+                                        <div class="fw-bold">MB Bank</div>
                                         <small class="text-muted">Chuyển khoản ngân hàng MB Bank</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- VNPay info panel -->
+                        <!-- MB Bank info panel -->
                         <div id="bookingBankPanel" style="display:none;background:#fffdf0;border:1px solid #fde68a;border-radius:14px;padding:1.2rem;margin-bottom:.8rem;animation:bkFadeIn .25s ease;">
                             <div style="font-weight:700;font-size:.82rem;color:#92400e;margin-bottom:.8rem;">
                                 <i class="fas fa-university me-1"></i> Thông tin chuyển khoản ngân hàng
                             </div>
                             <div class="d-flex gap-3 align-items-start">
                                 <img id="bookingBankQr"
-                                     src="https://img.vietqr.io/image/MB-0968073500-qr_only.png?amount=0&addInfo=DATSAN&accountName=LU+DANG+HUNG"
+                                     src="https://img.vietqr.io/image/MB-7369786789-qr_only.png?amount=0&addInfo=DATSAN&accountName=LU+DANG+HUNG"
                                      alt="QR MB Bank"
                                      style="width:120px;height:120px;border-radius:10px;border:2px solid #fde68a;padding:3px;background:#fff;flex-shrink:0;">
                                 <div style="display:grid;gap:.4rem;font-size:.85rem;">
                                     <div><span style="color:#78716c;min-width:110px;display:inline-block;">Ngân hàng</span> <strong>MB Bank</strong></div>
-                                    <div><span style="color:#78716c;min-width:110px;display:inline-block;">Số tài khoản</span> <strong style="font-family:monospace;color:#6366f1;">0968073500</strong></div>
+                                    <div><span style="color:#78716c;min-width:110px;display:inline-block;">Số tài khoản</span> <strong style="font-family:monospace;color:#6366f1;">7369786789</strong></div>
                                     <div><span style="color:#78716c;min-width:110px;display:inline-block;">Chủ tài khoản</span> <strong>LU DANG HUNG</strong></div>
                                     <div><span style="color:#78716c;min-width:110px;display:inline-block;">Số tiền</span> <strong id="bookingBankAmount" style="color:#6366f1;">—</strong></div>
                                     <div><span style="color:#78716c;min-width:110px;display:inline-block;">Nội dung CK</span> <strong id="bookingBankRef" style="font-family:monospace;color:#6366f1;">DATSAN</strong></div>
@@ -324,12 +321,9 @@ require_once __DIR__ . '/includes/header.php';
                                 <i class="fas fa-info-circle me-1"></i>
                                 Ghi đúng nội dung chuyển khoản để được xác nhận tự động
                             </div>
-                            <div style="margin-top:.85rem;padding:.75rem 1rem;background:#fff;border:1.5px solid #fde68a;border-radius:10px;display:flex;align-items:center;gap:.7rem;">
-                                <input type="checkbox" id="bookingBankConfirm" onchange="updateBookingConfirmBtn()"
-                                       style="width:18px;height:18px;accent-color:#d97706;cursor:pointer;flex-shrink:0;">
-                                <label for="bookingBankConfirm" style="font-size:.84rem;font-weight:600;color:#374151;cursor:pointer;margin:0;">
-                                    Tôi đã chuyển khoản thành công
-                                </label>
+                            <div style="margin-top:.85rem;padding:.65rem 1rem;background:#fef9c3;border-radius:10px;font-size:.82rem;color:#92400e;">
+                                <i class="fas fa-arrow-down me-1"></i>
+                                Nhấn <strong>"Tạo đơn & Hiện QR"</strong> → chuyển khoản → nhấn <strong>"Kiểm tra thanh toán"</strong>
                             </div>
                         </div>
 
@@ -375,6 +369,8 @@ require_once __DIR__ . '/includes/header.php';
                             <i class="fas fa-check me-2"></i>Xác nhận đặt sân
                         </button>
                     </div>
+                    <!-- Vùng hướng dẫn chờ thanh toán chuyển khoản -->
+                    <div id="transferWaitingNote" style="display:none;"></div>
                 </div>
             </div>
             
@@ -396,7 +392,7 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                             <div class="feature-item mb-3">
                                 <i class="fas fa-credit-card text-success me-2"></i>
-                                <strong>Thanh toán MoMo, VNPay</strong>
+                                <strong>Thanh toán MoMo, MB Bank</strong>
                                 <p class="small text-muted mb-0">Đa dạng phương thức thanh toán</p>
                             </div>
                             <div class="feature-item mb-3">
@@ -501,11 +497,13 @@ require_once __DIR__ . '/includes/header.php';
                     <p class="mb-1"><strong>Thời gian:</strong> <span id="finalDateTime">-</span></p>
                     <p class="mb-0"><strong>Tổng tiền:</strong> <span id="finalTotal" class="text-success fw-bold">-</span></p>
                 </div>
+                <div id="bookingSuccessNote" style="display:none;" class="alert alert-success py-2 mb-3 text-start"></div>
+                <p class="text-muted small mb-3">Tự động chuyển trang sau <span id="redirectCountdown">2</span> giây...</p>
                 <div class="d-grid gap-2">
-                    <a href="booking-history.php" class="btn btn-success fw-bold" style="border-radius:12px;">
-                        <i class="fas fa-list me-2"></i>Xem lịch sử đặt sân
+                    <a href="booking-history.php" class="btn btn-success fw-bold" style="border-radius:12px;" onclick="clearTimeout(window._redirectTimer)">
+                        <i class="fas fa-list me-2"></i>Xem lịch sử đặt sân ngay
                     </a>
-                    <button class="btn btn-outline-secondary" style="border-radius:12px;" data-bs-dismiss="modal">
+                    <button class="btn btn-outline-secondary" style="border-radius:12px;" data-bs-dismiss="modal" onclick="clearTimeout(window._redirectTimer)">
                         <i class="fas fa-times me-2"></i>Đóng
                     </button>
                 </div>
@@ -564,7 +562,7 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                 </div>
 
-                <!-- Bank / VNPay Panel -->
+                <!-- Bank / MB Bank Panel -->
                 <div id="pmBankPanel" style="display:none;">
                     <div style="background:#fffdf0;border:1px solid #fde68a;border-radius:14px;padding:1rem 1.2rem;margin-bottom:1rem;">
                         <div style="font-weight:700;font-size:.82rem;color:#92400e;margin-bottom:.7rem;">
@@ -572,7 +570,7 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                         <div style="display:flex;gap:1rem;align-items:flex-start;">
                             <img id="pmBankQr"
-                                 src="https://img.vietqr.io/image/MB-0968073500-qr_only.png?amount=0&addInfo=DATSAN&accountName=LU+DANG+HUNG"
+                                 src="https://img.vietqr.io/image/MB-7369786789-qr_only.png?amount=0&addInfo=DATSAN&accountName=LU+DANG+HUNG"
                                  alt="QR MB Bank"
                                  style="width:120px;height:120px;border-radius:10px;border:2px solid #fde68a;padding:3px;background:#fff;flex-shrink:0;">
                             <div style="display:grid;gap:.5rem;font-size:.88rem;">
@@ -582,7 +580,7 @@ require_once __DIR__ . '/includes/header.php';
                                 </div>
                                 <div style="display:flex;gap:.5rem;">
                                     <span style="color:#78716c;min-width:110px;">Số tài khoản</span>
-                                    <strong style="font-family:monospace;color:#6366f1;font-size:.95rem;">0968073500</strong>
+                                    <strong style="font-family:monospace;color:#6366f1;font-size:.95rem;">7369786789</strong>
                                 </div>
                                 <div style="display:flex;gap:.5rem;">
                                     <span style="color:#78716c;min-width:110px;">Chủ tài khoản</span>
@@ -676,19 +674,32 @@ function selectBookingPM(method, el) {
     }
 
     // Hiện/ẩn panels
-    document.getElementById('bookingMomoPanel').style.display = method === 'momo'   ? 'block' : 'none';
-    document.getElementById('bookingBankPanel').style.display = method === 'vnpay'  ? 'block' : 'none';
+    document.getElementById('bookingMomoPanel').style.display = method === 'momo'  ? 'block' : 'none';
+    document.getElementById('bookingBankPanel').style.display = method === 'vnpay' ? 'block' : 'none';
 
-    // Reset checkboxes khi đổi phương thức
-    document.getElementById('bookingMomoConfirm').checked = false;
-    document.getElementById('bookingBankConfirm').checked = false;
+    // Reset trạng thái pending nếu đổi phương thức
+    if (window._pendingPaymentMethod && window._pendingPaymentMethod !== method) {
+        window._pendingBookingId   = null;
+        window._pendingTransferRef = null;
+        const btn = document.getElementById('confirmBooking');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-check me-2"></i>Xác nhận đặt sân';
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-success');
+            btn.disabled = false;
+        }
+        const noteBox = document.getElementById('transferWaitingNote');
+        if (noteBox) noteBox.style.display = 'none';
+    }
+    window._pendingPaymentMethod = method;
 
-    // Update QR với tổng tiền hiện tại
-    updatePaymentQR(method);
+    // Update nút theo phương thức
     updateBookingConfirmBtn();
 }
 
 function updatePaymentQR(method) {
+    // QR sẽ được cập nhật sau khi tạo booking thực (có mã booking)
+    // Hiển thị preview với số tiền từ summary
     const totalEl  = document.getElementById('summaryTotal');
     const amount   = totalEl ? totalEl.textContent.replace(/[^\d]/g, '') : '0';
     const ref      = 'DATSAN-' + Date.now().toString(36).toUpperCase().slice(-5);
@@ -697,33 +708,41 @@ function updatePaymentQR(method) {
         const qr = document.getElementById('bookingMomoQr');
         if (qr) qr.src = `https://img.vietqr.io/image/MOMO-0968073500-qr_only.png?amount=${amount}&addInfo=${encodeURIComponent(ref)}&accountName=LU+DANG+HUNG`;
         const amtEl = document.getElementById('bookingMomoAmount');
-        const refEl = document.getElementById('bookingMomoRef');
         if (amtEl) amtEl.textContent = parseInt(amount).toLocaleString('vi-VN') + 'đ';
-        if (refEl) refEl.textContent = ref;
     } else if (method === 'vnpay') {
         const qr = document.getElementById('bookingBankQr');
-        if (qr) qr.src = `https://img.vietqr.io/image/MB-0968073500-qr_only.png?amount=${amount}&addInfo=${encodeURIComponent(ref)}&accountName=LU+DANG+HUNG`;
+        if (qr) qr.src = `https://img.vietqr.io/image/MB-7369786789-qr_only.png?amount=${amount}&addInfo=${encodeURIComponent(ref)}&accountName=LU+DANG+HUNG`;
         const amtEl = document.getElementById('bookingBankAmount');
-        const refEl = document.getElementById('bookingBankRef');
         if (amtEl) amtEl.textContent = parseInt(amount).toLocaleString('vi-VN') + 'đ';
-        if (refEl) refEl.textContent = ref;
     }
 }
 
 function updateBookingConfirmBtn() {
-    const method   = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'cash';
-    const btn      = document.getElementById('confirmBooking');
+    const method = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'cash';
+    const btn    = document.getElementById('confirmBooking');
     if (!btn) return;
 
-    if (method === 'cash') {
+    // Nếu đang chờ thanh toán chuyển khoản
+    if (window._pendingBookingId && (method === 'momo' || method === 'vnpay')) {
+        btn.innerHTML = '<i class="fas fa-search me-2"></i>Kiểm tra thanh toán';
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-primary');
         btn.disabled = false;
-        btn.style.opacity = '1';
         return;
     }
-    const momoOk = method === 'momo'  && document.getElementById('bookingMomoConfirm')?.checked;
-    const bankOk = method === 'vnpay' && document.getElementById('bookingBankConfirm')?.checked;
-    btn.disabled      = !(momoOk || bankOk);
-    btn.style.opacity = (momoOk || bankOk) ? '1' : '0.5';
+
+    // Bình thường
+    btn.innerHTML = '<i class="fas fa-check me-2"></i>Xác nhận đặt sân';
+    if (method === 'momo' || method === 'vnpay') {
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-primary');
+        btn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Thanh toán';
+    } else {
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-primary');
+    }
+    btn.disabled = false;
+    btn.style.opacity = '1';
 }
 
 // Init
@@ -819,26 +838,11 @@ function sendBookingChat() {
 <script src="assets/js/booking-online.js"></script>
 <?php if ($preselected_court): ?>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Tự động chọn sân nếu có court_id trong URL
-    const courtId = '<?php echo $preselected_court['id']; ?>';
-    const selectBtn = document.querySelector(`[data-court-id="${courtId}"]`);
-    if (selectBtn) {
-        // Scroll đến sân được chọn
-        selectBtn.closest('.court-booking-card').scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'center' 
-        });
-        
-        // Highlight sân được chọn
-        selectBtn.closest('.court-booking-card').style.border = '2px solid #007bff';
-        selectBtn.closest('.court-booking-card').style.backgroundColor = '#f8f9ff';
-        
-        // Tự động click sau 1 giây
-        setTimeout(() => {
-            selectBtn.click();
-        }, 1000);
-    }
-});
+// Truyền data sân được preselect từ PHP sang JS
+window._preselectedCourt = {
+    id:    '<?php echo (int)$preselected_court['id']; ?>',
+    name:  '<?php echo addslashes(htmlspecialchars_decode($preselected_court['name'], ENT_QUOTES)); ?>',
+    price: <?php echo (int)$preselected_court['price_per_hour']; ?>
+};
 </script>
 <?php endif; ?>

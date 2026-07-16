@@ -54,39 +54,39 @@ $payment_error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_payment'])) {
     $method = $_POST['payment_method'] ?? 'cash';
 
-    // Cập nhật trạng thái thành active
-    $upd = $mysqli->prepare(
-        'UPDATE training_registrations SET status = "active", payment_method = ?, payment_at = NOW() WHERE id = ?'
-    );
-    // Thêm cột nếu chưa có (safe migration)
+    // Thêm cột nếu chưa có
     $mysqli->query('ALTER TABLE training_registrations ADD COLUMN IF NOT EXISTS payment_method VARCHAR(30) DEFAULT NULL');
     $mysqli->query('ALTER TABLE training_registrations ADD COLUMN IF NOT EXISTS payment_at DATETIME DEFAULT NULL');
 
-    $upd = $mysqli->prepare(
-        'UPDATE training_registrations SET status = "active", payment_method = ?, payment_at = NOW() WHERE id = ?'
-    );
-    $upd->bind_param('si', $method, $reg_id);
-    $upd->execute();
-    $upd->close();
+    if ($method === 'cash') {
+        // Tiền mặt: xác nhận ngay
+        $upd = $mysqli->prepare('UPDATE training_registrations SET status="active", payment_method=?, payment_at=NOW() WHERE id=?');
+        $upd->bind_param('si', $method, $reg_id);
+        $upd->execute();
+        $upd->close();
 
-    // Gửi thông báo
-    if (!empty($_SESSION['user_id'])) {
-        try {
-            require_once __DIR__ . '/includes/notification-system.php';
-            $ns = new NotificationSystem();
-            $ns->notifyTrainingRegistered(
-                (int)$_SESSION['user_id'],
-                $reg['student_code'],
-                $label,
-                $reg['coach_name'] ?? 'HLV'
-            );
-        } catch (Exception $e) {}
+        if (!empty($_SESSION['user_id'])) {
+            try {
+                require_once __DIR__ . '/includes/notification-system.php';
+                $ns = new NotificationSystem();
+                $ns->notifyTrainingRegistered((int)$_SESSION['user_id'], $reg['student_code'], $label, $reg['coach_name'] ?? 'HLV');
+            } catch (Exception $e) {}
+        }
+        $payment_done = true;
+        $reg['status'] = 'active';
+    } else {
+        // MoMo / Bank: giữ pending, chờ webhook
+        $upd = $mysqli->prepare('UPDATE training_registrations SET payment_method=? WHERE id=?');
+        $upd->bind_param('si', $method, $reg_id);
+        $upd->execute();
+        $upd->close();
+        // Không set active ngay - sẽ do webhook xử lý
+        // Hiển thị trang chờ thanh toán
+        $payment_done = false; // vẫn show form nhưng ở trạng thái "đang chờ"
+        $waiting_transfer = true;
     }
-
-    $payment_done = true;
-    // Reload để lấy status mới
-    $reg['status'] = 'active';
 }
+$waiting_transfer = $waiting_transfer ?? false;
 
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -523,17 +523,13 @@ require_once __DIR__ . '/includes/header.php';
                                 <i class="fas fa-info-circle me-1"></i>
                                 Mở app MoMo → Quét QR hoặc Chuyển tiền → Nhập SĐT → Điền đúng nội dung CK
                             </div>
-                            <!-- Checkbox xác nhận -->
-                            <div style="margin-top:.85rem;padding:.75rem 1rem;background:#fff;border:1.5px solid #f9a8d4;border-radius:10px;display:flex;align-items:center;gap:.7rem;">
-                                <input type="checkbox" id="momoConfirm" onchange="updatePayBtn()"
-                                       style="width:18px;height:18px;accent-color:#db2777;cursor:pointer;flex-shrink:0;">
-                                <label for="momoConfirm" style="font-size:.84rem;font-weight:600;color:#374151;cursor:pointer;margin:0;">
-                                    Tôi đã chuyển khoản thành công qua MoMo
-                                </label>
+                            <!-- Hướng dẫn tự động -->
+                            <div style="margin-top:.85rem;padding:.65rem .9rem;background:#fce7f3;border-radius:10px;font-size:.82rem;color:#be185d;">
+                                <i class="fas fa-magic me-1"></i> Hệ thống <strong>tự động xác nhận</strong> khi nhận được tiền MoMo.
                             </div>
                         </div>
 
-                        <!-- VNPay/Bank -->
+                        <!-- MB Bank -->
                         <label class="pay-method" id="pm-vnpay" onclick="selectPayMethod('vnpay',this)">
                             <input type="radio" name="payment_method" value="vnpay" style="accent-color:#2563eb;transform:scale(1.2);">
                             <div class="pay-method-icon" style="background:#dbeafe;">
@@ -552,7 +548,7 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                             <div style="display:flex;gap:1rem;align-items:flex-start;">
                                 <img id="bankQr"
-                                     src="https://img.vietqr.io/image/MB-0968073500-qr_only.png?amount=<?php echo $price; ?>&addInfo=<?php echo urlencode($reg['student_code']); ?>&accountName=LU+DANG+HUNG"
+                                     src="https://img.vietqr.io/image/MB-7369786789-qr_only.png?amount=<?php echo $price; ?>&addInfo=<?php echo urlencode($reg['student_code']); ?>&accountName=LU+DANG+HUNG"
                                      alt="QR MB Bank"
                                      style="width:120px;height:120px;border-radius:10px;border:2px solid #fde68a;padding:3px;background:#fff;flex-shrink:0;">
                                 <div style="display:grid;gap:.45rem;font-size:.85rem;flex:1;">
@@ -562,7 +558,7 @@ require_once __DIR__ . '/includes/header.php';
                                     </div>
                                     <div style="display:flex;gap:.5rem;">
                                         <span style="color:#78716c;min-width:115px;">Số tài khoản</span>
-                                        <strong style="font-family:monospace;color:#6366f1;">0968073500</strong>
+                                        <strong style="font-family:monospace;color:#6366f1;">7369786789</strong>
                                     </div>
                                     <div style="display:flex;gap:.5rem;">
                                         <span style="color:#78716c;min-width:115px;">Chủ tài khoản</span>
@@ -582,19 +578,18 @@ require_once __DIR__ . '/includes/header.php';
                                 <i class="fas fa-info-circle me-1"></i>
                                 Ghi đúng nội dung chuyển khoản để được xác nhận tự động
                             </div>
-                            <!-- Checkbox xác nhận -->
-                            <div style="margin-top:.85rem;padding:.75rem 1rem;background:#fff;border:1.5px solid #fde68a;border-radius:10px;display:flex;align-items:center;gap:.7rem;">
-                                <input type="checkbox" id="bankConfirm" onchange="updatePayBtn()"
-                                       style="width:18px;height:18px;accent-color:#d97706;cursor:pointer;flex-shrink:0;">
-                                <label for="bankConfirm" style="font-size:.84rem;font-weight:600;color:#374151;cursor:pointer;margin:0;">
-                                    Tôi đã chuyển khoản thành công
-                                </label>
+                            <!-- Hướng dẫn tự động -->
+                            <div style="margin-top:.85rem;padding:.65rem .9rem;background:#fef9c3;border-radius:10px;font-size:.82rem;color:#92400e;">
+                                <i class="fas fa-magic me-1"></i> Hệ thống <strong>tự động xác nhận</strong> khi nhận được tiền về MB Bank.
                             </div>
                         </div>
 
                         <button type="submit" class="btn-pay" id="payBtn">
                             <i class="fas fa-check-circle me-2"></i>Xác nhận thanh toán
                         </button>
+
+                        <!-- Waiting box khi đang chờ thanh toán chuyển khoản -->
+                        <div id="trainingWaitingBox" style="display:none;"></div>
 
                         <div style="text-align:center;margin-top:.8rem;">
                             <small style="color:#9ca3af;font-size:.78rem;">
@@ -681,32 +676,75 @@ require_once __DIR__ . '/includes/header.php';
 function selectPayMethod(method) {
     document.querySelectorAll('.pay-method').forEach(el => el.classList.remove('selected'));
     document.getElementById('pm-' + method)?.classList.add('selected');
-    // Hiện/ẩn panels
     document.getElementById('momoPanel').style.display = method === 'momo'  ? 'block' : 'none';
     document.getElementById('bankPanel').style.display = method === 'vnpay' ? 'block' : 'none';
-    // Reset checkboxes khi đổi phương thức
-    document.getElementById('momoConfirm').checked = false;
-    document.getElementById('bankConfirm').checked = false;
-    updatePayBtn();
 }
 
 function updatePayBtn() {
-    const method  = document.querySelector('input[name="payment_method"]:checked')?.value || 'cash';
-    const btn     = document.getElementById('payBtn');
-    if (!btn) return;
-    if (method === 'cash') {
-        btn.disabled = false;
-        btn.style.opacity = '1';
-        return;
-    }
-    const momoOk = method === 'momo'  && document.getElementById('momoConfirm').checked;
-    const bankOk = method === 'vnpay' && document.getElementById('bankConfirm').checked;
-    btn.disabled    = !(momoOk || bankOk);
-    btn.style.opacity = (momoOk || bankOk) ? '1' : '.5';
+    // Không cần nữa - nút luôn enable
 }
 
+// Xử lý submit form - nếu chuyển khoản thì intercept
+document.getElementById('payForm')?.addEventListener('submit', function(e) {
+    const method = document.querySelector('input[name="payment_method"]:checked')?.value || 'cash';
+    if (method === 'cash') return; // submit bình thường
+
+    // Chặn submit mặc định cho MoMo/Bank
+    e.preventDefault();
+
+    const btn = document.getElementById('payBtn');
+    if (btn) {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;"></span>Đang tạo đơn...';
+        btn.disabled = true;
+    }
+
+    // Submit qua AJAX
+    const formData = new FormData(this);
+    fetch('', { method: 'POST', body: formData })
+    .then(r => r.text())
+    .then(() => {
+        // Đổi nút thành đang chờ
+        if (btn) {
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px;"></span>Đang chờ thanh toán...';
+            btn.disabled = true;
+        }
+
+        const code = '<?php echo addslashes($reg['student_code']); ?>';
+
+        if (typeof PaymentPolling !== 'undefined') {
+            PaymentPolling.showWaitingBox('trainingWaitingBox', code);
+            PaymentPolling.start('training_code=' + code, function() {
+                PaymentPolling.showSuccessToast(
+                    'Đăng ký khóa học thành công! Chào mừng bạn.',
+                    'training.php',
+                    2000
+                );
+            }, 'trainingWaitingBox');
+        }
+    })
+    .catch(err => {
+        if (btn) { btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Xác nhận thanh toán'; btn.disabled = false; }
+    });
+});
+
 // Init
-updatePayBtn();
+<?php if ($waiting_transfer): ?>
+// Đang chờ thanh toán chuyển khoản từ lần submit trước
+(function() {
+    const code = '<?php echo addslashes($reg['student_code']); ?>';
+    const btn  = document.getElementById('payBtn');
+    if (btn) {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" style="width:14px;height:14px;border-width:2px;"></span>Đang chờ thanh toán...';
+        btn.disabled = true;
+    }
+    if (typeof PaymentPolling !== 'undefined') {
+        PaymentPolling.showWaitingBox('trainingWaitingBox', code);
+        PaymentPolling.start('training_code=' + code, function() {
+            PaymentPolling.showSuccessToast('Đăng ký khóa học thành công!', 'training.php', 2000);
+        }, 'trainingWaitingBox');
+    }
+})();
+<?php endif; ?>
 </script>
 
 <style>
@@ -714,3 +752,4 @@ updatePayBtn();
 </style>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
+<script src="assets/js/payment-polling.js"></script>

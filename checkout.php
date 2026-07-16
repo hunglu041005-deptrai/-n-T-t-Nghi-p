@@ -395,7 +395,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="success-banner mb-4">
         <div class="success-icon"><i class="fas fa-check"></i></div>
         <h3 class="fw-bold mb-1">Đặt hàng thành công!</h3>
-        <p style="color:rgba(255,255,255,.65);margin:.3rem 0 1rem;">Cảm ơn bạn đã tin tưởng BadmintonPro Shop</p>
+        <p style="color:rgba(255,255,255,.65);margin:.3rem 0 1rem;">Cảm ơn bạn đã tin tưởng Hưng Dũng Shop</p>
         <div class="order-info-grid">
             <div class="order-info-item">
                 <div class="lbl">Mã đơn hàng</div>
@@ -405,14 +405,15 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <div class="order-info-item">
                 <div class="lbl">Trạng thái</div>
-                <div class="val" style="color:#4ade80;">Đang xử lý</div>
+                <div class="val" id="orderStatusLabel" style="color:#4ade80;">Đang xử lý</div>
             </div>
             <div class="order-info-item">
                 <div class="lbl">Thanh toán</div>
                 <div class="val">
                     <?php
-                    $pm_labels = ['cod'=>'Tiền mặt (COD)','bank'=>'Chuyển khoản','momo'=>'Ví MoMo','vnpay'=>'VNPay'];
-                    echo $pm_labels[$_POST['payment_method'] ?? 'cod'] ?? 'COD';
+                    $pm = $_POST['payment_method'] ?? 'cod';
+                    $pm_labels = ['cod'=>'Tiền mặt (COD)','bank'=>'MB Bank','momo'=>'Ví MoMo','vnpay'=>'MB Bank'];
+                    echo $pm_labels[$pm] ?? 'COD';
                     ?>
                 </div>
             </div>
@@ -423,36 +424,83 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 
-    <?php if (in_array($_POST['payment_method'] ?? 'cod', ['bank','vnpay'])): ?>
-    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:16px;padding:1.2rem 1.5rem;margin-bottom:1.5rem;">
-        <div class="fw-bold mb-2" style="color:#92400e;"><i class="fas fa-university me-2"></i>Hoàn tất chuyển khoản để xác nhận đơn</div>
-        <table style="font-size:.88rem;width:100%;">
-            <tr><td style="color:#6b7280;width:150px;">Ngân hàng:</td><td><strong>MB Bank</strong></td></tr>
-            <tr><td style="color:#6b7280;">Số tài khoản:</td><td><strong style="font-family:monospace;">0968073500</strong></td></tr>
-            <tr><td style="color:#6b7280;">Chủ TK:</td><td><strong>LU DANG HUNG</strong></td></tr>
-            <tr><td style="color:#6b7280;">Nội dung CK:</td>
-                <td><strong style="color:#6366f1;"><?php echo escape($order_number); ?></strong></td></tr>
-        </table>
+    <?php if (in_array($_POST['payment_method'] ?? 'cod', ['bank','vnpay','momo'])): ?>
+    <?php
+    $pm_order  = $_POST['payment_method'] ?? 'bank';
+    $is_momo   = ($pm_order === 'momo');
+    $order_ref = $order_number; // dùng order_number làm nội dung CK
+    // Lấy total từ DB
+    $tot_stmt = $mysqli->prepare('SELECT total_amount FROM orders WHERE id=? LIMIT 1');
+    $tot_stmt->bind_param('i', $order_id_result);
+    $tot_stmt->execute();
+    $tot_row = $tot_stmt->get_result()->fetch_assoc();
+    $tot_stmt->close();
+    $order_total = (int)($tot_row['total_amount'] ?? 0);
+    $qr_enc = urlencode($order_ref);
+    $qr_url = $is_momo
+        ? "https://img.vietqr.io/image/MOMO-0968073500-qr_only.png?amount={$order_total}&addInfo={$qr_enc}&accountName=LU+DANG+HUNG"
+        : "https://img.vietqr.io/image/MB-7369786789-qr_only.png?amount={$order_total}&addInfo={$qr_enc}&accountName=LU+DANG+HUNG";
+    ?>
+    <!-- Waiting box -->
+    <div id="orderWaitingBox"></div>
+
+    <div style="background:<?php echo $is_momo ? '#fdf2f8' : '#fffbeb'; ?>;border:1px solid <?php echo $is_momo ? '#f9a8d4' : '#fde68a'; ?>;border-radius:16px;padding:1.2rem 1.5rem;margin-bottom:1.5rem;">
+        <div class="fw-bold mb-3" style="color:<?php echo $is_momo ? '#be185d' : '#92400e'; ?>;">
+            <i class="fas fa-<?php echo $is_momo ? 'wallet' : 'university'; ?> me-2"></i>
+            Chuyển khoản để xác nhận đơn hàng – hệ thống tự động xác nhận
+        </div>
+        <div class="d-flex gap-3 align-items-start">
+            <img src="<?php echo $qr_url; ?>" alt="QR"
+                 style="width:130px;height:130px;border-radius:10px;border:2px solid <?php echo $is_momo ? '#f9a8d4' : '#fde68a'; ?>;padding:3px;background:#fff;flex-shrink:0;">
+            <div style="font-size:.87rem;display:grid;gap:.4rem;">
+                <?php if ($is_momo): ?>
+                <div><span style="color:#78716c;min-width:120px;display:inline-block;">Số điện thoại</span> <strong style="color:#db2777;font-family:monospace;">0968073500</strong></div>
+                <?php else: ?>
+                <div><span style="color:#78716c;min-width:120px;display:inline-block;">Ngân hàng</span> <strong>MB Bank</strong></div>
+                <div><span style="color:#78716c;min-width:120px;display:inline-block;">Số tài khoản</span> <strong style="font-family:monospace;color:#6366f1;">7369786789</strong></div>
+                <?php endif; ?>
+                <div><span style="color:#78716c;min-width:120px;display:inline-block;">Chủ tài khoản</span> <strong>LU DANG HUNG</strong></div>
+                <div><span style="color:#78716c;min-width:120px;display:inline-block;">Số tiền</span> <strong style="color:<?php echo $is_momo ? '#db2777' : '#6366f1'; ?>"><?php echo number_format($order_total); ?>đ</strong></div>
+                <div><span style="color:#78716c;min-width:120px;display:inline-block;">Nội dung CK</span> <strong style="font-family:monospace;color:<?php echo $is_momo ? '#db2777' : '#6366f1'; ?>"><?php echo escape($order_ref); ?></strong></div>
+            </div>
+        </div>
+        <div style="margin-top:.8rem;background:<?php echo $is_momo ? '#fce7f3' : '#fef9c3'; ?>;border-radius:8px;padding:.5rem .8rem;font-size:.78rem;color:<?php echo $is_momo ? '#9d174d' : '#854d0e'; ?>;">
+            <i class="fas fa-magic me-1"></i> Hệ thống <strong>tự động xác nhận</strong> khi nhận được tiền – không cần làm thêm gì.
+        </div>
     </div>
-    <?php elseif (($_POST['payment_method'] ?? '') === 'momo'): ?>
-    <div style="background:#fdf2f8;border:1px solid #f9a8d4;border-radius:16px;padding:1.2rem 1.5rem;margin-bottom:1.5rem;">
-        <div class="fw-bold mb-2" style="color:#be185d;"><i class="fas fa-wallet me-2"></i>Hoàn tất chuyển khoản MoMo để xác nhận đơn</div>
-        <table style="font-size:.88rem;width:100%;">
-            <tr><td style="color:#6b7280;width:150px;">Số điện thoại:</td><td><strong style="font-family:monospace;color:#db2777;">0968073500</strong></td></tr>
-            <tr><td style="color:#6b7280;">Tên tài khoản:</td><td><strong>LU DANG HUNG</strong></td></tr>
-            <tr><td style="color:#6b7280;">Nội dung CK:</td>
-                <td><strong style="color:#db2777;"><?php echo escape($order_number); ?></strong></td></tr>
-        </table>
+
+    <script>
+    // Polling tự động cho shop order
+    (function() {
+        const ordNum = '<?php echo addslashes($order_number); ?>';
+        const ordId  = <?php echo (int)$order_id_result; ?>;
+
+        if (typeof PaymentPolling === 'undefined') return;
+
+        PaymentPolling.showWaitingBox('orderWaitingBox', ordNum);
+        PaymentPolling.start('order_id=' + ordId, function(data) {
+            PaymentPolling.showSuccessToast(
+                'Đã nhận thanh toán! Đơn hàng đã xác nhận.',
+                'order-history.php',
+                2000
+            );
+        }, 'orderWaitingBox');
+    })();
+    </script>
+
+    <?php elseif (($_POST['payment_method'] ?? '') === 'cod'): ?>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:.9rem 1.2rem;margin-bottom:1.5rem;font-size:.88rem;color:#166534;">
+        <i class="fas fa-info-circle me-2"></i> Thanh toán khi nhận hàng. Shipper sẽ thu tiền khi giao.
     </div>
     <?php endif; ?>
 
     <div class="d-flex gap-2 justify-content-center">
         <a href="order-history.php" class="btn fw-bold px-4 py-2"
-           style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:12px;">
+           style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:12px;" onclick="if(window.PaymentPolling) PaymentPolling.stop()">
             <i class="fas fa-history me-2"></i>Xem đơn hàng
         </a>
         <a href="equipment.php" class="btn fw-bold px-4 py-2"
-           style="background:#f3f4f6;color:#374151;border:none;border-radius:12px;">
+           style="background:#f3f4f6;color:#374151;border:none;border-radius:12px;" onclick="if(window.PaymentPolling) PaymentPolling.stop()">
             <i class="fas fa-shopping-bag me-2"></i>Tiếp tục mua sắm
         </a>
     </div>
@@ -577,14 +625,14 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
                         </div>
 
-                        <!-- VNPay -->
+                        <!-- MB Bank -->
                         <div class="pm-card" onclick="selectPM('vnpay', this)">
                             <div class="pm-icon-wrap" style="background:#dbeafe;">
                                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V10M19 21V10" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round"/><path d="M2 10l10-7 10 7" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><rect x="9" y="14" width="6" height="7" rx="1" fill="#2563eb" opacity=".15" stroke="#2563eb" stroke-width="1.5"/></svg>
                             </div>
                             <div class="pm-text">
-                                <div class="pm-title">VNPay</div>
-                                <div class="pm-sub">Thẻ ATM, Visa, MasterCard, QR Pay</div>
+                                <div class="pm-title">MB Bank</div>
+                                <div class="pm-sub">Chuyển khoản ngân hàng MB Bank</div>
                             </div>
                             <div class="pm-check-wrap">
                                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 7l3 3 6-6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -664,7 +712,7 @@ require_once __DIR__ . '/includes/header.php';
                                 <!-- QR MB Bank (VietQR) -->
                                 <div style="flex-shrink:0;text-align:center;">
                                     <img id="bankQrImg"
-                                         src="https://img.vietqr.io/image/MB-0968073500-qr_only.png?amount=0&addInfo=DONHANG&accountName=LU+DANG+HUNG"
+                                         src="https://img.vietqr.io/image/MB-7369786789-qr_only.png?amount=0&addInfo=DONHANG&accountName=LU+DANG+HUNG"
                                          alt="QR MB Bank"
                                          style="width:130px;height:130px;border-radius:10px;border:2px solid #fde68a;background:#fff;padding:4px;">
                                     <div style="font-size:.68rem;color:#92400e;margin-top:4px;font-weight:600;">Quét bằng app ngân hàng</div>
@@ -677,7 +725,7 @@ require_once __DIR__ . '/includes/header.php';
                                     </div>
                                     <div style="display:flex;gap:.5rem;align-items:center;">
                                         <span style="color:#78716c;min-width:105px;">Số tài khoản</span>
-                                        <span class="bank-ref" style="color:#6366f1;">0968073500</span>
+                                        <span class="bank-ref" style="color:#6366f1;">7369786789</span>
                                     </div>
                                     <div style="display:flex;gap:.5rem;align-items:center;">
                                         <span style="color:#78716c;min-width:105px;">Chủ tài khoản</span>
@@ -1070,7 +1118,7 @@ function selectPM(method, el) {
         if (amountEl2) amountEl2.textContent = amountEl ? amountEl.textContent : '—';
         // Update QR với số tiền + nội dung
         const qr = document.getElementById('bankQrImg');
-        if (qr) qr.src = `https://img.vietqr.io/image/MB-0968073500-qr_only.png?amount=${amountRaw}&addInfo=${encodeURIComponent(ref)}&accountName=LU+DANG+HUNG`;
+        if (qr) qr.src = `https://img.vietqr.io/image/MB-7369786789-qr_only.png?amount=${amountRaw}&addInfo=${encodeURIComponent(ref)}&accountName=LU+DANG+HUNG`;
     } else if (method === 'momo') {
         document.getElementById('momoDetail').style.display = 'block';
         document.getElementById('momoRef').textContent = ref;
@@ -1199,3 +1247,4 @@ loadProvinces();
 </script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
+<script src="assets/js/payment-polling.js"></script>
